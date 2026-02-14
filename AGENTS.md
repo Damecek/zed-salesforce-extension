@@ -28,6 +28,9 @@ Use these as authoritative sources:
   https://zed.dev/docs/extensions/developing-extensions
 - Zed language/LSP docs:  
   https://zed.dev/docs/extensions/languages
+- In addition to the URLs above, you may use the Context7 documentation server for Zed docs/source:
+  - `websites/zed_dev`
+  - `zed-industries/zed`
 - Local Salesforce Apex extension reference implementation:
   - `third_party/salesforcedx-vscode-apex/src/languageServer.ts`
   - `third_party/salesforcedx-vscode-apex/src/requirements.ts`
