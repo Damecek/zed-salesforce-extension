@@ -148,16 +148,24 @@ Then optionally enable/validate semantic tokens (`semantic_tokens = "combined"` 
 
 ### Using upstream Tree-sitter highlight queries
 
-`tree-sitter-sfapex` ships its own Tree-sitter highlight queries. These are good starting points (and are easy to diff/update because we pin the commit):
+We prefer to reuse as much as possible from `tree-sitter-sfapex` (grammar + queries), and only patch where Zed-specific needs require it.
+
+`tree-sitter-sfapex` ships Tree-sitter query files that we can treat as the baseline source-of-truth (and they are easy to diff/update because we pin the commit):
 
 - `apex/queries/highlights.scm`
 - `soql/queries/highlights.scm`
 - `sosl/queries/highlights.scm`
 
-In Zed, we keep queries in `languages/apex/highlights.scm` (and similarly for other languages if added). For the MVP, we can:
+In Zed, queries live under `languages/<language>/` (e.g. `languages/apex/highlights.scm`). For the MVP, the intended workflow is:
 
-- start with a minimal hand-written `languages/apex/highlights.scm` that cleanly distinguishes comments/strings/keywords, then
-- selectively copy/adapt patterns from the upstream `apex/queries/highlights.scm` once the grammar is wired up and stable.
+- Copy the upstream `apex/queries/highlights.scm` into `languages/apex/highlights.scm` (verbatim first).
+- Only then adjust captures/patterns when Zed rendering shows gaps or conflicts.
+
+When we add `soql`/`sosl`/`sflog` as Zed languages, we should follow the same approach:
+
+- Copy upstream queries into `languages/soql/highlights.scm`, `languages/sosl/highlights.scm`, etc.
+
+If the pinned `rev` changes, re-sync the query files from upstream in the same PR so highlighting stays consistent with the grammar version.
 
 ## 4) LSP wiring in Zed
 
