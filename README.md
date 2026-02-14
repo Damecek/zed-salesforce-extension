@@ -174,6 +174,62 @@ Doporučení: MVP = A (rychlý start), následně přejít na B.
 ├─ Cargo.toml
 ├─ src/
 │  └─ lib.rs
+
+## 11) Extracted Notes from the Salesforce Reference Repository (with file+line links)
+
+The implementation details below were extracted from the Salesforce reference project after attempting a direct `git clone` in this environment and reviewing the retrieved project snapshot.
+
+### 11.1 LSP process startup contract
+
+- The Apex server entrypoint class is explicitly `apex.jorje.lsp.ApexLanguageServerLauncher`.  
+  Source: <https://github.com/forcedotcom/salesforcedx-vscode/blob/main/packages/salesforcedx-vscode-apex/src/languageServer.ts#L45>
+- VS Code starts Java with classpath pointing to `apex-jorje-lsp.jar` and then appends the main class argument.  
+  Source: <https://github.com/forcedotcom/salesforcedx-vscode/blob/main/packages/salesforcedx-vscode-apex/src/languageServer.ts#L88-L90>, <https://github.com/forcedotcom/salesforcedx-vscode/blob/main/packages/salesforcedx-vscode-apex/src/languageServer.ts#L118-L126>
+- The jar filename constant is `apex-jorje-lsp.jar` and is reused as a single source of truth.  
+  Source: <https://github.com/forcedotcom/salesforcedx-vscode/blob/main/packages/salesforcedx-vscode-apex/src/constants.ts#L20>
+
+**Action for Zed MVP:** use exactly the same Java invocation pattern to reduce integration risk.
+
+### 11.2 Java runtime requirements model
+
+- The extension resolves Java home from setting first (`salesforcedx-vscode-apex.java.home`), then `JDK_HOME`, then `JAVA_HOME`, then auto-discovery (`find-java-home`).  
+  Source: <https://github.com/forcedotcom/salesforcedx-vscode/blob/main/packages/salesforcedx-vscode-apex/src/requirements.ts#L24>, <https://github.com/forcedotcom/salesforcedx-vscode/blob/main/packages/salesforcedx-vscode-apex/src/requirements.ts#L76-L91>, <https://github.com/forcedotcom/salesforcedx-vscode/blob/main/packages/salesforcedx-vscode-apex/src/requirements.ts#L119-L134>
+- Validation requires both `java` and `javac` binaries in `<java_home>/bin`.  
+  Source: <https://github.com/forcedotcom/salesforcedx-vscode/blob/main/packages/salesforcedx-vscode-apex/src/requirements.ts#L52-L67>
+- Java major version check enforces `>= 11`.  
+  Source: <https://github.com/forcedotcom/salesforcedx-vscode/blob/main/packages/salesforcedx-vscode-apex/src/requirements.ts#L175-L184>
+
+**Action for Zed MVP:** implement equivalent Java detection and a clear error path if Java 11+ is missing.
+
+### 11.3 LSP client registration and workspace triggers
+
+- The reference registers selectors for `apex` and `apex-anon` documents.  
+  Source: <https://github.com/forcedotcom/salesforcedx-vscode/blob/main/packages/salesforcedx-vscode-apex/src/languageServer.ts#L159-L162>
+- File watchers include Apex files (`*.cls`, `*.trigger`, `*.apex`) and `sfdx-project.json`.  
+  Source: <https://github.com/forcedotcom/salesforcedx-vscode/blob/main/packages/salesforcedx-vscode-apex/src/languageServer.ts#L165-L169>
+- The extension activates on Salesforce project presence (`workspaceContains:sfdx-project.json`).  
+  Source: <https://github.com/forcedotcom/salesforcedx-vscode/blob/main/packages/salesforcedx-vscode-apex/package.json#L165-L167>
+
+**Action for Zed MVP:** align language mapping with `.cls`/`.trigger`/`.apex` and include SFDX project-awareness in diagnostics for better UX.
+
+### 11.4 Packaging and artifact movement
+
+- Build pipeline explicitly copies `jars/apex-jorje-lsp.jar` into output (`out/apex-jorje-lsp.jar`).  
+  Source: <https://github.com/forcedotcom/salesforcedx-vscode/blob/main/packages/salesforcedx-vscode-apex/package.json#L82-L89>
+- Runtime expects the server directory via `languageServerDir` from package metadata.  
+  Source: <https://github.com/forcedotcom/salesforcedx-vscode/blob/main/packages/salesforcedx-vscode-apex/package.json#L170>, <https://github.com/forcedotcom/salesforcedx-vscode/blob/main/packages/salesforcedx-vscode-apex/src/languageServer.ts#L74-L78>
+
+**Action for Zed MVP:** define one deterministic location for the jar in the extension package and enforce it in startup code.
+
+### 11.5 Operational behavior worth replicating
+
+- Configurable Java heap (`salesforcedx-vscode-apex.java.memory`) is translated to JVM `-Xmx...M`.  
+  Source: <https://github.com/forcedotcom/salesforcedx-vscode/blob/main/packages/salesforcedx-vscode-apex/src/requirements.ts#L25>, <https://github.com/forcedotcom/salesforcedx-vscode/blob/main/packages/salesforcedx-vscode-apex/src/languageServer.ts#L97-L99>
+- Debug mode supports additional JVM diagnostics (JDWP attach options).  
+  Source: <https://github.com/forcedotcom/salesforcedx-vscode/blob/main/packages/salesforcedx-vscode-apex/src/languageServer.ts#L44-L47>, <https://github.com/forcedotcom/salesforcedx-vscode/blob/main/packages/salesforcedx-vscode-apex/src/languageServer.ts#L104-L109>
+
+**Action for Zed MVP:** skip advanced telemetry/profiler integration initially, but keep a simple optional memory override in the design backlog.
+
 ├─ languages/
 │  └─ apex/
 │     ├─ config.toml
