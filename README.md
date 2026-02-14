@@ -209,15 +209,59 @@ Recommended docs for users should include Java 21 guidance (consistent with Sale
 
 ## 7) Workspace assumptions and limitations
 
-Salesforce Apex LSP behavior can depend on project shape (`sfdx-project.json` and Salesforce metadata layout). For MVP we should define supported workspace profile:
+Salesforce Apex LSP behavior depends on project shape (`sfdx-project.json`, `packageDirectories`, and Salesforce DX metadata layout). For MVP, we need to be explicit about what we do (and do not) support so startup is deterministic.
 
-- Primary target: SFDX project root containing `sfdx-project.json`.
-- Apex file locations consistent with Salesforce DX conventions.
+### Zed worktree model (important)
+
+Zed starts language servers per *worktree* (a directory project or a single-file worktree). Practically, this means:
+
+- Best supported: open the **project directory** as a Zed worktree (not just a standalone `.cls` file).
+- If you open a **single file** outside a directory worktree, there may be no `sfdx-project.json` available to the server, so LSP features can be missing or degraded.
+
+Zed also has a Restricted/Trusted worktree model:
+
+- In Restricted mode, `.zed/settings.json` in the project is not applied, and language servers configured *by that project settings file* are not spawned.
+- This extension is expected to provide its own language server command via `language_server_command` (installed extension code). Project settings may still matter for per-project configuration, but only after the worktree is trusted.
+
+### Supported workspace profile (MVP)
+
+- Primary target: an **SFDX project root** opened as the worktree root, containing `sfdx-project.json` at the top level.
+- Apex source files are located according to Salesforce DX conventions, e.g. within one of the `packageDirectories` roots (commonly `force-app/main/default/...`).
+
+Concrete examples of layouts we expect to work best:
+
+- `sfdx-project.json`
+- `force-app/main/default/classes/*.cls`
+- `force-app/main/default/triggers/*.trigger`
+
+Concrete examples that are *not* a primary MVP target (may partially work, but not guaranteed):
+
+- “MDAPI-style” folders like `src/classes` without `sfdx-project.json`
+- Standalone `.apex` scripts outside an SFDX project (highlighting should work; LSP may be degraded)
 
 If unsupported workspace is opened, extension should degrade gracefully:
 
 - language mode + syntax highlighting still work
 - LSP issues are surfaced with actionable diagnostics
+
+### Explicit limitations (MVP)
+
+- Multi-root setups: Zed can have multiple worktrees open. The MVP assumes Apex LSP is started independently per worktree and does not attempt cross-worktree indexing.
+- Root discovery: the MVP requires `sfdx-project.json` to exist at the *worktree root*. If it is missing, the extension should not start the language server and should emit a clear error suggesting to open the SFDX project root folder.
+- Org-dependent features (auth files, namespace from org, etc.) are out of scope. The VS Code implementation uses the Salesforce Core extension to derive org namespace and other context; we will not replicate that during MVP.
+- Restricted worktrees: the MVP should not start any external process (including Java) until the worktree is trusted, aligning with Zed’s supply-chain safety posture.
+
+### `sfdx-project.json` parsing (MVP)
+
+For deterministic behavior, the extension should parse `sfdx-project.json` from the worktree root and use only a minimal set of keys:
+
+- `packageDirectories`: determine which folder roots constitute “source packages” for Apex. This is used for:
+  - validation and error messages (e.g. warn when a `.cls` is outside any package directory)
+  - future: limit file watching/index scope if needed
+- `namespace`: used only for user-facing messaging and (future) LSP UX parity behaviors; we do not assume org namespace access in MVP.
+- `sourceApiVersion`: used for compatibility decisions that depend on API version (future). For MVP it is optional and can be logged for diagnostics.
+
+If parsing fails (invalid JSON), the extension should not start LSP and should log an actionable parse error.
 
 ## MVP Scope (Phase 1)
 
@@ -239,8 +283,8 @@ If unsupported workspace is opened, extension should degrade gracefully:
 ## Out of MVP (next phases)
 
 - Advanced code lenses, Apex-specific commands, log tooling.
+- Org-specific indexing and search.
 - Embedded SOQL enhancements.
-- Full parity with Salesforce VS Code extension behaviors.
 - Deep index lifecycle controls (restart/reset UX parity).
 
 ## Suggested Implementation Milestones
