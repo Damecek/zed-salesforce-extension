@@ -1,0 +1,25 @@
+/*
+ * Copyright (c) 2017, salesforce.com, inc.
+ * All rights reserved.
+ * Licensed under the BSD 3-Clause license.
+ * For full license text, see LICENSE.txt file in the repo root or https://opensource.org/licenses/BSD-3-Clause
+ */
+import { Command, SfCommandBuilder } from '@salesforce/salesforcedx-utils';
+import { EmptyParametersGatherer, SfCommandlet, SfWorkspaceChecker } from '@salesforce/salesforcedx-utils-vscode';
+import { nls } from '../messages';
+import { SfCommandletExecutor } from './util';
+
+class AliasList extends SfCommandletExecutor<{}> {
+  public build(_data: {}): Command {
+    return new SfCommandBuilder()
+      .withDescription(nls.localize('alias_list_text'))
+      .withArg('alias:list')
+      .withLogName('alias_list')
+      .build();
+  }
+}
+
+export const aliasList = async (): Promise<void> => {
+  const commandlet = new SfCommandlet(new SfWorkspaceChecker(), new EmptyParametersGatherer(), new AliasList());
+  await commandlet.run();
+};

@@ -1,0 +1,999 @@
+{
+  "name": "salesforcedx-vscode-core",
+  "displayName": "Salesforce CLI Integration",
+  "description": "Provides integration with the Salesforce CLI",
+  "qna": "https://github.com/forcedotcom/salesforcedx-vscode/issues",
+  "bugs": {
+    "url": "https://github.com/forcedotcom/salesforcedx-vscode/issues"
+  },
+  "repository": {
+    "url": "https://github.com/forcedotcom/salesforcedx-vscode"
+  },
+  "icon": "images/VSCodeCore.png",
+  "galleryBanner": {
+    "color": "#ECECEC",
+    "theme": "light"
+  },
+  "version": "65.17.3",
+  "publisher": "salesforce",
+  "o11yUploadEndpoint": "https://794testsite.my.site.com/byolwr/webruntime/log/metrics",
+  "enableO11y": "true",
+  "productFeatureId": "aJCEE0000000mLm4AI",
+  "license": "BSD-3-Clause",
+  "engines": {
+    "vscode": "^1.90.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "dependencies": {
+    "@salesforce/core": "^8.24.0",
+    "@salesforce/o11y-reporter": "^1.7.4",
+    "@salesforce/salesforcedx-sobjects-faux-generator": "*",
+    "@salesforce/salesforcedx-utils": "*",
+    "@salesforce/salesforcedx-utils-vscode": "*",
+    "@salesforce/source-deploy-retrieve": "^12.31.9",
+    "@salesforce/source-tracking": "^7.8.1",
+    "@salesforce/templates": "^65.1.1",
+    "@salesforce/ts-types": "2.0.12",
+    "@salesforce/vscode-i18n": "*",
+    "@salesforce/vscode-service-provider": "^1.5.0",
+    "applicationinsights": "1.0.7",
+    "fast-xml-parser": "^4.3.2",
+    "glob": "^11.1.0",
+    "rxjs": "^5.4.1",
+    "vscode-uri": "^3.1.0"
+  },
+  "devDependencies": {
+    "@types/jest": "^29.5.5",
+    "esbuild": "0.25.12",
+    "jest": "^29.7.0",
+    "jest-junit": "14.0.1",
+    "nyc": "^15",
+    "ts-jest": "^29.4.1"
+  },
+  "packaging": {
+    "assets": [
+      "LICENSE.txt",
+      "package.nls.ja.json",
+      "package.nls.json",
+      "README.md",
+      ".vscodeignore",
+      "OSSREADME.json",
+      "resources",
+      "syntaxes",
+      "images",
+      "dist"
+    ],
+    "packageUpdates": {
+      "main": "dist/src/index.js",
+      "dependencies": {
+        "applicationinsights": "1.0.7",
+        "@salesforce/o11y-reporter": "^1.7.4"
+      },
+      "devDependencies": {}
+    }
+  },
+  "scripts": {
+    "vscode:bundle": "wireit",
+    "vscode:prepublish": "npm prune --production",
+    "vscode:package:legacy": "wireit",
+    "vscode:sha256": "node ../../scripts/generate-sha256.js >> ../../SHA256",
+    "vscode:publish": "node ../../scripts/publish-vsix.js",
+    "compile": "wireit",
+    "lint": "wireit",
+    "clean": "shx rm -rf node_modules out dist coverage .nyc_output .wireit .eslintcache *.vsix",
+    "test": "wireit"
+  },
+  "wireit": {
+    "compile": {
+      "command": "tsc --build --pretty",
+      "clean": "if-file-deleted",
+      "dependencies": [
+        "../salesforcedx-sobjects-faux-generator:compile",
+        "../salesforcedx-utils:compile",
+        "../salesforcedx-utils-vscode:compile",
+        "../salesforcedx-vscode-i18n:compile"
+      ],
+      "files": [
+        "src/**/*.ts",
+        "test/**/*.ts",
+        "tsconfig.json",
+        "../../tsconfig.common.json",
+        "package.json"
+      ],
+      "output": [
+        "out/**",
+        "tsconfig.tsbuildinfo"
+      ]
+    },
+    "copy:schemas": {
+      "command": "shx mkdir -p resources/schemas && shx cp ../../node_modules/@salesforce/core/schemas/* ./resources/schemas",
+      "files": [
+        "../../node_modules/@salesforce/core/schemas"
+      ],
+      "output": [
+        "resources/schemas"
+      ]
+    },
+    "vscode:bundle": {
+      "command": "node ./esbuild.config.mjs",
+      "dependencies": [
+        "compile",
+        "copy:schemas"
+      ],
+      "files": [
+        "esbuild.config.mjs",
+        "../../scripts/bundling/node.mjs",
+        "out/**"
+      ],
+      "output": [
+        "dist"
+      ]
+    },
+    "test": {
+      "command": "jest --coverage",
+      "dependencies": [
+        "compile"
+      ],
+      "files": [
+        "src/**/*.ts",
+        "test/**/*.ts",
+        "jest.config.js",
+        "../../config/jest.base.config.js"
+      ],
+      "output": [
+        "coverage"
+      ]
+    },
+    "lint": {
+      "command": "eslint --color --cache --cache-location .eslintcache .",
+      "dependencies": [
+        "../eslint-local-rules:compile"
+      ],
+      "files": [
+        "src/**/*.ts",
+        "test/**/*.ts",
+        "../../eslint.config.mjs",
+        "package.json",
+        "package.nls.json"
+      ],
+      "output": []
+    },
+    "vscode:package:legacy": {
+      "command": "ts-node ../../scripts/vsce-bundled-extension.ts",
+      "dependencies": [
+        "vscode:bundle"
+      ]
+    }
+  },
+  "nyc": {
+    "reporter": [
+      "text-summary",
+      "lcov"
+    ]
+  },
+  "activationEvents": [
+    "workspaceContains:sfdx-project.json"
+  ],
+  "main": "./out/src",
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "metadata",
+          "title": "%orgBrowser.activitybar.title%",
+          "icon": "resources/orgBrowserIcon.svg"
+        },
+        {
+          "id": "conflicts",
+          "title": "%conflict_detect_resolve_view%",
+          "icon": "resources/issues.svg"
+        }
+      ]
+    },
+    "views": {
+      "metadata": [
+        {
+          "id": "metadata",
+          "name": "%metadata_view_title_text%",
+          "when": "sf:project_opened && config.salesforcedx-vscode-core.useLegacyOrgBrowser"
+        }
+      ],
+      "conflicts": [
+        {
+          "id": "conflicts",
+          "name": "%conflicts_view_title_text%",
+          "when": "sf:project_opened"
+        }
+      ]
+    },
+    "menus": {
+      "view/title": [
+        {
+          "command": "sf.metadata.view.type.refresh",
+          "when": "view == metadata",
+          "group": "navigation"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "sf.metadata.view.component.refresh",
+          "when": "view == metadata && viewItem =~ /(folder|type)/",
+          "group": "inline"
+        },
+        {
+          "command": "sf.retrieve.open.component",
+          "when": "view == metadata && viewItem == component",
+          "group": "inline"
+        },
+        {
+          "command": "sf.retrieve.component",
+          "when": "view == metadata && viewItem =~ /(type|component|folder)/",
+          "group": "inline"
+        },
+        {
+          "command": "sf.conflict.open",
+          "when": "view == conflicts && viewItem == conflict-actions",
+          "group": "inline"
+        }
+      ],
+      "editor/context": [
+        {
+          "command": "sf.retrieve.current.source.file",
+          "when": "sf:project_opened && resourceLangId != 'forcesourcemanifest' && sf:in_package_directories && sf:has_target_org && sf:show_shared_commands"
+        },
+        {
+          "command": "sf.retrieve.in.manifest",
+          "when": "sf:project_opened && resourceLangId == 'forcesourcemanifest' && sf:has_target_org && sf:show_shared_commands"
+        },
+        {
+          "command": "sf.deploy.current.source.file",
+          "when": "sf:project_opened && resourceLangId != 'forcesourcemanifest' && sf:in_package_directories && sf:has_target_org && sf:show_shared_commands"
+        },
+        {
+          "command": "sf.deploy.in.manifest",
+          "when": "sf:project_opened && resourceLangId == 'forcesourcemanifest' && sf:has_target_org && sf:show_shared_commands"
+        },
+        {
+          "command": "sf.delete.source.current.file",
+          "when": "sf:project_opened && resourceLangId != 'forcesourcemanifest' && sf:in_package_directories && sf:has_target_org && sf:show_shared_commands"
+        },
+        {
+          "command": "sf.diff",
+          "when": "!explorerResourceIsFolder && sf:project_opened && resourceLangId != 'forcesourcemanifest' && sf:in_package_directories && sf:has_target_org  && sf:show_shared_commands"
+        },
+        {
+          "command": "sf.launch.apex.replay.debugger.with.current.file",
+          "when": "sf:project_opened && resource =~ /.\\.(cls|apex|log)?$/"
+        }
+      ],
+      "explorer/context": [
+        {
+          "command": "sf.lightning.generate.lwc",
+          "when": "explorerResourceIsFolder && resourceFilename == lwc && sf:project_opened"
+        },
+        {
+          "command": "sf.internal.lightning.generate.lwc",
+          "when": "explorerResourceIsFolder && sf:internal_dev"
+        },
+        {
+          "command": "sf.apex.generate.class",
+          "when": "explorerResourceIsFolder && resourcePath =~ /classes/ && sf:project_opened && sf:show_shared_commands"
+        },
+        {
+          "command": "sf.apex.generate.unit.test.class",
+          "when": "explorerResourceIsFolder && resourcePath =~ /classes/ && sf:project_opened"
+        },
+        {
+          "command": "sf.folder.diff",
+          "when": "explorerResourceIsFolder && sf:project_opened && sf:has_target_org && sf:show_shared_commands"
+        },
+        {
+          "command": "sf.analytics.generate.template",
+          "when": "explorerResourceIsFolder && resourceFilename == waveTemplates && sf:project_opened"
+        },
+        {
+          "command": "sf.visualforce.generate.component",
+          "when": "explorerResourceIsFolder && resourceFilename == components && sf:project_opened"
+        },
+        {
+          "command": "sf.visualforce.generate.page",
+          "when": "explorerResourceIsFolder && resourceFilename == pages && sf:project_opened"
+        },
+        {
+          "command": "sf.lightning.generate.app",
+          "when": "explorerResourceIsFolder && resourceFilename == aura && sf:project_opened"
+        },
+        {
+          "command": "sf.internal.lightning.generate.app",
+          "when": "explorerResourceIsFolder && sf:internal_dev"
+        },
+        {
+          "command": "sf.lightning.generate.aura.component",
+          "when": "explorerResourceIsFolder && resourceFilename == aura && sf:project_opened"
+        },
+        {
+          "command": "sf.internal.lightning.generate.aura.component",
+          "when": "explorerResourceIsFolder && sf:internal_dev"
+        },
+        {
+          "command": "sf.lightning.generate.event",
+          "when": "explorerResourceIsFolder && resourceFilename == aura && sf:project_opened"
+        },
+        {
+          "command": "sf.internal.lightning.generate.event",
+          "when": "explorerResourceIsFolder && sf:internal_dev"
+        },
+        {
+          "command": "sf.lightning.generate.interface",
+          "when": "explorerResourceIsFolder && resourceFilename == aura && sf:project_opened"
+        },
+        {
+          "command": "sf.internal.lightning.generate.interface",
+          "when": "explorerResourceIsFolder && sf:internal_dev"
+        },
+        {
+          "command": "sf.apex.generate.trigger",
+          "when": "explorerResourceIsFolder && resourceFilename == triggers && sf:project_opened"
+        },
+        {
+          "command": "sf.diff",
+          "when": "!explorerResourceIsFolder && sf:project_opened && resourceLangId != 'forcesourcemanifest' && sf:has_target_org && sf:show_shared_commands"
+        },
+        {
+          "command": "sf.retrieve.source.path",
+          "when": "sf:project_opened && resourceLangId != 'forcesourcemanifest' && sf:has_target_org && sf:show_shared_commands"
+        },
+        {
+          "command": "sf.retrieve.in.manifest",
+          "when": "sf:project_opened && resourceLangId == 'forcesourcemanifest' && sf:has_target_org && sf:show_shared_commands"
+        },
+        {
+          "command": "sf.deploy.source.path",
+          "when": "sf:project_opened && resourceLangId != 'forcesourcemanifest' && sf:has_target_org && sf:show_shared_commands"
+        },
+        {
+          "command": "sf.deploy.in.manifest",
+          "when": "sf:project_opened && resourceLangId == 'forcesourcemanifest' && sf:has_target_org && sf:show_shared_commands"
+        },
+        {
+          "command": "sf.delete.source",
+          "when": "sf:project_opened && resourceLangId != 'forcesourcemanifest' && sf:has_target_org && sf:show_shared_commands"
+        },
+        {
+          "command": "sf.project.generate.manifest",
+          "when": "sf:project_opened && resourceLangId != 'forcesourcemanifest' && sf:show_shared_commands"
+        },
+        {
+          "command": "sf.rename.lightning.component",
+          "when": "sf:project_opened && resource =~ /.*\\/(lwc|aura)\\/.*(\\/[^\\/]+\\.(html|css|js|xml|svg|cmp|app|design|auradoc))?$/"
+        }
+      ],
+      "commandPalette": [
+        {
+          "command": "sf.package.install",
+          "when": "sf:project_opened && sf:has_target_org"
+        },
+        {
+          "command": "sf.open.documentation",
+          "when": "sf:project_opened"
+        },
+        {
+          "command": "sf.project.retrieve.start",
+          "when": "sf:project_opened && !sf:isv_debug_project && sf:target_org_has_change_tracking && sf:has_target_org && sf:show_shared_commands"
+        },
+        {
+          "command": "sf.project.retrieve.start.ignore.conflicts",
+          "when": "sf:project_opened && !sf:isv_debug_project && sf:target_org_has_change_tracking && sf:has_target_org && sf:show_shared_commands"
+        },
+        {
+          "command": "sf.project.deploy.start",
+          "when": "sf:project_opened && !sf:isv_debug_project && sf:target_org_has_change_tracking && sf:has_target_org && sf:show_shared_commands"
+        },
+        {
+          "command": "sf.project.deploy.start.ignore.conflicts",
+          "when": "sf:project_opened && !sf:isv_debug_project && sf:target_org_has_change_tracking && sf:has_target_org && sf:show_shared_commands"
+        },
+        {
+          "command": "sf.view.all.changes",
+          "when": "sf:project_opened && !sf:isv_debug_project && sf:target_org_has_change_tracking && sf:show_shared_commands"
+        },
+        {
+          "command": "sf.view.local.changes",
+          "when": "sf:project_opened && !sf:isv_debug_project && sf:target_org_has_change_tracking && sf:show_shared_commands"
+        },
+        {
+          "command": "sf.view.remote.changes",
+          "when": "sf:project_opened && !sf:isv_debug_project && sf:target_org_has_change_tracking && sf:show_shared_commands"
+        },
+        {
+          "command": "sf.apex.generate.class",
+          "when": "sf:project_opened && sf:show_shared_commands"
+        },
+        {
+          "command": "sf.apex.generate.unit.test.class",
+          "when": "sf:project_opened"
+        },
+        {
+          "command": "sf.analytics.generate.template",
+          "when": "sf:project_opened"
+        },
+        {
+          "command": "sf.visualforce.generate.component",
+          "when": "sf:project_opened"
+        },
+        {
+          "command": "sf.visualforce.generate.page",
+          "when": "sf:project_opened"
+        },
+        {
+          "command": "sf.config.list",
+          "when": "sf:project_opened"
+        },
+        {
+          "command": "sf.alias.list",
+          "when": "sf:project_opened && (!isWeb || (isWeb && sf:code_builder_enabled))"
+        },
+        {
+          "command": "sf.project.generate",
+          "when": "!sf:internal_dev && (!isWeb || (isWeb && sf:code_builder_enabled))"
+        },
+        {
+          "command": "sf.project.generate.with.manifest",
+          "when": "!sf:internal_dev && (!isWeb || (isWeb && sf:code_builder_enabled))"
+        },
+        {
+          "command": "sf.project.generate.manifest",
+          "when": "false"
+        },
+        {
+          "command": "sf.rename.lightning.component",
+          "when": "false"
+        },
+        {
+          "command": "sf.apex.generate.trigger",
+          "when": "sf:project_opened"
+        },
+        {
+          "command": "sf.start.apex.debug.logging",
+          "when": "sf:project_opened && sf:replay_debugger_extension && sf:has_target_org && (!isWeb || (isWeb && sf:code_builder_enabled))"
+        },
+        {
+          "command": "sf.stop.apex.debug.logging",
+          "when": "sf:project_opened && sf:replay_debugger_extension && sf:has_target_org && (!isWeb || (isWeb && sf:code_builder_enabled))"
+        },
+        {
+          "command": "sf.retrieve.component",
+          "when": "false"
+        },
+        {
+          "command": "sf.retrieve.open.component",
+          "when": "false"
+        },
+        {
+          "command": "sf.retrieve.source.path",
+          "when": "false"
+        },
+        {
+          "command": "sf.deploy.source.path",
+          "when": "false"
+        },
+        {
+          "command": "sf.retrieve.current.source.file",
+          "when": "sf:project_opened && resourceLangId != 'forcesourcemanifest' && sf:in_package_directories && editorIsOpen && sf:has_target_org && sf:show_shared_commands"
+        },
+        {
+          "command": "sf.retrieve.in.manifest",
+          "when": "sf:project_opened && resourceLangId == 'forcesourcemanifest' && sf:has_target_org && sf:show_shared_commands"
+        },
+        {
+          "command": "sf.deploy.current.source.file",
+          "when": "sf:project_opened && resourceLangId != 'forcesourcemanifest' && sf:in_package_directories && editorIsOpen && sf:has_target_org && sf:show_shared_commands"
+        },
+        {
+          "command": "sf.deploy.in.manifest",
+          "when": "sf:project_opened && resourceLangId == 'forcesourcemanifest' && sf:has_target_org && sf:show_shared_commands"
+        },
+        {
+          "command": "sf.delete.source",
+          "when": "false"
+        },
+        {
+          "command": "sf.delete.source.current.file",
+          "when": "sf:project_opened && resourceLangId != 'forcesourcemanifest' && sf:in_package_directories && editorIsOpen && sf:has_target_org && sf:show_shared_commands"
+        },
+        {
+          "command": "sf.lightning.generate.lwc",
+          "when": "sf:project_opened"
+        },
+        {
+          "command": "sf.internal.lightning.generate.lwc",
+          "when": "false"
+        },
+        {
+          "command": "sf.lightning.generate.app",
+          "when": "sf:project_opened"
+        },
+        {
+          "command": "sf.internal.lightning.generate.app",
+          "when": "false"
+        },
+        {
+          "command": "sf.lightning.generate.aura.component",
+          "when": "sf:project_opened"
+        },
+        {
+          "command": "sf.internal.lightning.generate.aura.component",
+          "when": "false"
+        },
+        {
+          "command": "sf.lightning.generate.event",
+          "when": "sf:project_opened"
+        },
+        {
+          "command": "sf.internal.lightning.generate.event",
+          "when": "false"
+        },
+        {
+          "command": "sf.lightning.generate.interface",
+          "when": "sf:project_opened"
+        },
+        {
+          "command": "sf.internal.lightning.generate.interface",
+          "when": "false"
+        },
+        {
+          "command": "sf.diff",
+          "when": "false"
+        },
+        {
+          "command": "sf.folder.diff",
+          "when": "false"
+        },
+        {
+          "command": "sf.conflict.open",
+          "when": "false"
+        },
+        {
+          "command": "sf.internal.refreshsobjects",
+          "when": "sf:project_opened && sf:has_target_org"
+        },
+        {
+          "command": "sf.launch.apex.replay.debugger.with.current.file",
+          "when": "sf:project_opened && resource =~ /.\\.(cls|apex|log)?$/"
+        },
+        {
+          "command": "sf.metadata.view.type.refresh",
+          "when": "sf:project_opened && sf:has_target_org"
+        },
+        {
+          "command": "sf.metadata.view.component.refresh",
+          "when": "sf:project_opened && sf:has_target_org"
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "sf.package.install",
+        "title": "%package_install_text%"
+      },
+      {
+        "command": "sf.open.documentation",
+        "title": "%open_documentation_text%"
+      },
+      {
+        "command": "sf.project.retrieve.start",
+        "title": "%project_retrieve_start_default_org_text%"
+      },
+      {
+        "command": "sf.project.retrieve.start.ignore.conflicts",
+        "title": "%project_retrieve_start_ignore_conflicts_default_org_text%"
+      },
+      {
+        "command": "sf.project.deploy.start",
+        "title": "%project_deploy_start_default_org_text%"
+      },
+      {
+        "command": "sf.project.deploy.start.ignore.conflicts",
+        "title": "%project_deploy_start_ignore_conflicts_default_org_text%"
+      },
+      {
+        "command": "sf.view.all.changes",
+        "title": "%view_all_changes_text%"
+      },
+      {
+        "command": "sf.view.local.changes",
+        "title": "%view_local_changes_text%"
+      },
+      {
+        "command": "sf.view.remote.changes",
+        "title": "%view_remote_changes_text%"
+      },
+      {
+        "command": "sf.apex.generate.class",
+        "title": "%apex_generate_class_text%"
+      },
+      {
+        "command": "sf.apex.generate.unit.test.class",
+        "title": "%apex_generate_unit_test_class_text%"
+      },
+      {
+        "command": "sf.analytics.generate.template",
+        "title": "%analytics_generate_template_text%"
+      },
+      {
+        "command": "sf.visualforce.generate.component",
+        "title": "%visualforce_generate_component_text%"
+      },
+      {
+        "command": "sf.visualforce.generate.page",
+        "title": "%visualforce_generate_page_text%"
+      },
+      {
+        "command": "sf.lightning.generate.app",
+        "title": "%lightning_generate_app_text%"
+      },
+      {
+        "command": "sf.internal.lightning.generate.app",
+        "title": "%lightning_generate_app_text%"
+      },
+      {
+        "command": "sf.lightning.generate.aura.component",
+        "title": "%lightning_generate_aura_component_text%"
+      },
+      {
+        "command": "sf.internal.lightning.generate.aura.component",
+        "title": "%lightning_generate_aura_component_text%"
+      },
+      {
+        "command": "sf.lightning.generate.event",
+        "title": "%lightning_generate_event_text%"
+      },
+      {
+        "command": "sf.internal.lightning.generate.event",
+        "title": "%lightning_generate_event_text%"
+      },
+      {
+        "command": "sf.lightning.generate.interface",
+        "title": "%lightning_generate_interface_text%"
+      },
+      {
+        "command": "sf.internal.lightning.generate.interface",
+        "title": "%lightning_generate_interface_text%"
+      },
+      {
+        "command": "sf.config.list",
+        "title": "%config_list_text%"
+      },
+      {
+        "command": "sf.alias.list",
+        "title": "%alias_list_text%"
+      },
+      {
+        "command": "sf.project.generate",
+        "title": "%project_generate_text%"
+      },
+      {
+        "command": "sf.project.generate.with.manifest",
+        "title": "%project_generate_with_manifest_text%"
+      },
+      {
+        "command": "sf.apex.generate.trigger",
+        "title": "%apex_generate_trigger_text%"
+      },
+      {
+        "command": "sf.start.apex.debug.logging",
+        "title": "%start_apex_debug_logging%"
+      },
+      {
+        "command": "sf.stop.apex.debug.logging",
+        "title": "%stop_apex_debug_logging%"
+      },
+      {
+        "command": "sf.retrieve.source.path",
+        "title": "%retrieve_this_source_text%"
+      },
+      {
+        "command": "sf.retrieve.current.source.file",
+        "title": "%retrieve_this_source_text%"
+      },
+      {
+        "command": "sf.retrieve.in.manifest",
+        "title": "%retrieve_in_manifest_text%"
+      },
+      {
+        "command": "sf.deploy.source.path",
+        "title": "%deploy_this_source_text%"
+      },
+      {
+        "command": "sf.deploy.current.source.file",
+        "title": "%deploy_this_source_text%"
+      },
+      {
+        "command": "sf.deploy.in.manifest",
+        "title": "%deploy_in_manifest_text%"
+      },
+      {
+        "command": "sf.delete.source",
+        "title": "%delete_source_text%"
+      },
+      {
+        "command": "sf.delete.source.current.file",
+        "title": "%delete_source_this_source_text%"
+      },
+      {
+        "command": "sf.lightning.generate.lwc",
+        "title": "%lightning_generate_lwc_text%"
+      },
+      {
+        "command": "sf.internal.lightning.generate.lwc",
+        "title": "%lightning_generate_lwc_text%"
+      },
+      {
+        "command": "sf.metadata.view.type.refresh",
+        "title": "%refresh_types_text%",
+        "icon": {
+          "light": "resources/light/refresh.svg",
+          "dark": "resources/dark/refresh.svg"
+        }
+      },
+      {
+        "command": "sf.metadata.view.component.refresh",
+        "title": "%refresh_components_text%",
+        "icon": {
+          "light": "resources/light/refresh.svg",
+          "dark": "resources/dark/refresh.svg"
+        }
+      },
+      {
+        "command": "sf.retrieve.component",
+        "title": "%retrieve_display_text%",
+        "icon": {
+          "light": "resources/light/retrieve.svg",
+          "dark": "resources/dark/retrieve.svg"
+        }
+      },
+      {
+        "command": "sf.retrieve.open.component",
+        "title": "%retrieve_and_open_display_text%",
+        "icon": {
+          "light": "resources/light/code.svg",
+          "dark": "resources/dark/code.svg"
+        }
+      },
+      {
+        "command": "sf.project.generate.manifest",
+        "title": "%project_generate_manifest%"
+      },
+      {
+        "command": "sf.diff",
+        "title": "%diff_against_org%"
+      },
+      {
+        "command": "sf.folder.diff",
+        "title": "%diff_folder_against_org%"
+      },
+      {
+        "command": "sf.conflict.open",
+        "title": "%conflict_detect_open_file%",
+        "icon": {
+          "light": "resources/light/go-to-file.svg",
+          "dark": "resources/dark/go-to-file.svg"
+        }
+      },
+      {
+        "command": "sf.internal.refreshsobjects",
+        "title": "%sobjects_refresh%"
+      },
+      {
+        "command": "sf.launch.apex.replay.debugger.with.current.file",
+        "title": "%launch_apex_replay_debugger_with_current_file%"
+      },
+      {
+        "command": "sf.rename.lightning.component",
+        "title": "%rename_lightning_component_text%"
+      }
+    ],
+    "configuration": {
+      "type": "object",
+      "title": "%core_settings_title%",
+      "properties": {
+        "salesforcedx-vscode-core.clearOutputTab": {
+          "type": "boolean",
+          "default": false,
+          "description": "%setting_clear_output_tab_description%"
+        },
+        "salesforcedx-vscode-core.show-cli-success-msg": {
+          "type": "boolean",
+          "default": true,
+          "description": "%show_cli_success_msg_description%"
+        },
+        "salesforcedx-vscode-core.telemetry.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "%telemetry_enabled_description%"
+        },
+        "salesforcedx-vscode-core.push-or-deploy-on-save.preferDeployOnSave": {
+          "type": "boolean",
+          "default": false,
+          "description": "%prefer_deploy_on_save_enabled_description%"
+        },
+        "salesforcedx-vscode-core.push-or-deploy-on-save.showOutputPanel": {
+          "type": "boolean",
+          "default": false,
+          "description": "%push_or_deploy_on_save_show_output_panel%"
+        },
+        "salesforcedx-vscode-core.detectConflictsForDeployAndRetrieve": {
+          "type": "boolean",
+          "default": false,
+          "description": "%conflict_detection_enabled_description%"
+        },
+        "salesforcedx-vscode-core.experimental.enableSourceTrackingForDeployAndRetrieve": {
+          "type": "boolean",
+          "default": true,
+          "description": "%enable_source_tracking_for_deploy_and_retrieve%"
+        },
+        "salesforcedx-vscode-core.enable-sobject-refresh-on-startup": {
+          "type": "boolean",
+          "default": false,
+          "description": "%enable_sobject_refresh_on_startup_description%"
+        },
+        "salesforcedx-vscode-core.NODE_EXTRA_CA_CERTS": {
+          "type": "string",
+          "default": null,
+          "description": "%node_extra_ca_certs_description%"
+        },
+        "salesforcedx-vscode-core.SF_LOG_LEVEL": {
+          "type": "string",
+          "enum": [
+            "trace",
+            "debug",
+            "info",
+            "warn",
+            "error",
+            "fatal"
+          ],
+          "default": "fatal",
+          "description": "%sf_log_level_description%"
+        },
+        "salesforcedx-vscode-core.telemetry-tag": {
+          "type": "string",
+          "default": null,
+          "description": "%telemetry_tag_description%"
+        },
+        "salesforcedx-vscode-core.useLegacyOrgBrowser": {
+          "type": "boolean",
+          "default": true,
+          "description": "%use_legacy_org_browser_description%"
+        },
+        "salesforcedx-vscode-core.useMetadataExtensionCommands": {
+          "type": "boolean",
+          "default": false,
+          "description": "%use_metadata_extension_commands_description%"
+        }
+      }
+    },
+    "jsonValidation": [
+      {
+        "fileMatch": "sfdx-project.json",
+        "url": "./resources/schemas/sfdx-project.schema.json"
+      },
+      {
+        "fileMatch": "*-scratch-def.json",
+        "url": "./resources/schemas/project-scratch-def.schema.json"
+      }
+    ],
+    "languages": [
+      {
+        "id": "ignore",
+        "filenames": [
+          ".forceignore"
+        ]
+      },
+      {
+        "id": "json",
+        "filenamePatterns": [
+          "*.wdash",
+          "*.wdf",
+          "*.wdpr",
+          "*.wlens",
+          "*.orchestration"
+        ]
+      },
+      {
+        "id": "forcesourcemanifest",
+        "aliases": [
+          "ForceSourceManifest",
+          "forcesourcemanifest"
+        ],
+        "filenamePatterns": [
+          "**/manifest/**/*.xml"
+        ]
+      }
+    ],
+    "grammars": [
+      {
+        "language": "forcesourcemanifest",
+        "scopeName": "manifest.text.xml",
+        "path": "./syntaxes/manifestXML.tmLanguage.json"
+      }
+    ],
+    "walkthroughs": [
+      {
+        "id": "sf.org-browser",
+        "title": "%org_browser_walkthrough_title%",
+        "description": "%org_browser_walkthrough_description%",
+        "steps": [
+          {
+            "id": "open-org-browser",
+            "title": "%org_browser_walkthrough_open_title%",
+            "description": "%org_browser_walkthrough_open_description%",
+            "media": {
+              "image": "images/walkthrough/org-browser.png",
+              "altText": "%org_browser_walkthrough_open_alt%"
+            },
+            "completionEvents": [
+              "onCommand:workbench.view.extension.metadata"
+            ]
+          },
+          {
+            "id": "browse-metadata-types",
+            "title": "%org_browser_walkthrough_browse_title%",
+            "description": "%org_browser_walkthrough_browse_description%",
+            "media": {
+              "image": "images/walkthrough/org-browser.png",
+              "altText": "%org_browser_walkthrough_browse_alt%"
+            }
+          },
+          {
+            "id": "retrieve-metadata",
+            "title": "%org_browser_walkthrough_retrieve_title%",
+            "description": "%org_browser_walkthrough_retrieve_description%",
+            "media": {
+              "image": "images/walkthrough/org-browser.png",
+              "altText": "%org_browser_walkthrough_retrieve_alt%"
+            }
+          }
+        ]
+      },
+      {
+        "id": "sf.connected-org",
+        "title": "%connected_org_walkthrough_title%",
+        "description": "%connected_org_walkthrough_description%",
+        "steps": [
+          {
+            "id": "understand-default-org",
+            "title": "%connected_org_walkthrough_understand_title%",
+            "description": "%connected_org_walkthrough_understand_description%",
+            "media": {
+              "image": "images/walkthrough/org-picker.png",
+              "altText": "%connected_org_walkthrough_understand_alt%"
+            }
+          },
+          {
+            "id": "set-default-org",
+            "title": "%connected_org_walkthrough_set_title%",
+            "description": "%connected_org_walkthrough_set_description%",
+            "media": {
+              "image": "images/walkthrough/org-picker.png",
+              "altText": "%connected_org_walkthrough_set_alt%"
+            },
+            "completionEvents": [
+              "onCommand:sf.set.default.org"
+            ]
+          },
+          {
+            "id": "open-default-org",
+            "title": "%connected_org_walkthrough_open_title%",
+            "description": "%connected_org_walkthrough_open_description%",
+            "media": {
+              "image": "images/walkthrough/org-picker.png",
+              "altText": "%connected_org_walkthrough_open_alt%"
+            }
+          }
+        ]
+      }
+    ]
+  }
+}
