@@ -68,8 +68,7 @@ Planned structure (high-level):
 │     ├─ brackets.scm            (optional early)
 │     ├─ textobjects.scm         (optional, later)
 │     └─ injections.scm          (optional, later)
-├─ grammars/
-│  └─ ... (tree-sitter apex grammar source registration via extension.toml)
+├─ (no `grammars/` dir required; Tree-sitter grammars are fetched from Git repos declared in `extension.toml`)
 └─ vendor/
    └─ apex-jorje-lsp.jar         (or runtime-downloaded cache)
 ```
@@ -79,11 +78,56 @@ Planned structure (high-level):
 Implement `languages/apex/config.toml` with:
 
 - `name = "Apex"`
-- `grammar = "..."` (tree-sitter Apex grammar identifier)
+- `grammar = "apex"` (Tree-sitter grammar name registered in `extension.toml`, see below)
 - `path_suffixes = ["cls", "trigger", "apex"]`
 - `line_comments = ["// "]`
 
 This gives file association + comment behavior and is required before deeper LSP integration.
+
+### Tree-sitter grammar (chosen implementation)
+
+This extension uses the `tree-sitter-sfapex` grammar repository, pinned to a specific Git revision for deterministic builds:
+
+- Repository: `https://github.com/aheber/tree-sitter-sfapex`
+- Pinned commit (rev): `3597575a429766dd7ecce9f5bb97f6fec4419d5d`
+
+Zed loads Tree-sitter grammars that are registered in `extension.toml`. Minimal registration for Apex:
+
+```toml
+# extension.toml
+[grammars.apex]
+repository = "https://github.com/aheber/tree-sitter-sfapex"
+rev = "3597575a429766dd7ecce9f5bb97f6fec4419d5d"
+```
+
+`tree-sitter-sfapex` is a multi-grammar repository (it includes `apex`, `soql`, `sosl`, and `sflog` via `tree-sitter.json`).
+If we decide to support these file types in Zed later, register them explicitly too:
+
+```toml
+# extension.toml
+[grammars.soql]
+repository = "https://github.com/aheber/tree-sitter-sfapex"
+rev = "3597575a429766dd7ecce9f5bb97f6fec4419d5d"
+
+[grammars.sosl]
+repository = "https://github.com/aheber/tree-sitter-sfapex"
+rev = "3597575a429766dd7ecce9f5bb97f6fec4419d5d"
+
+[grammars.sflog]
+repository = "https://github.com/aheber/tree-sitter-sfapex"
+rev = "3597575a429766dd7ecce9f5bb97f6fec4419d5d"
+```
+
+Upstream file type mapping (from `tree-sitter.json`) is:
+
+- `apex`: `.cls`, `.trigger`
+- `soql`: `.soql`
+- `sosl`: `.sosl`
+- `sflog`: `.sflog`
+
+For the Zed MVP we also associate `.apex` (Anonymous Apex) with the `apex` grammar via `path_suffixes`, even though it is not listed upstream.
+
+For local grammar development (iterating on queries/grammar), Zed also supports `file://` repositories in `extension.toml`.
 
 ## 3) Syntax highlighting strategy
 
@@ -101,6 +145,19 @@ Why Tree-sitter first:
 - We need a guaranteed baseline highlighting even before advanced LSP semantic token mapping.
 
 Then optionally enable/validate semantic tokens (`semantic_tokens = "combined"` in user settings) to augment highlighting.
+
+### Using upstream Tree-sitter highlight queries
+
+`tree-sitter-sfapex` ships its own Tree-sitter highlight queries. These are good starting points (and are easy to diff/update because we pin the commit):
+
+- `apex/queries/highlights.scm`
+- `soql/queries/highlights.scm`
+- `sosl/queries/highlights.scm`
+
+In Zed, we keep queries in `languages/apex/highlights.scm` (and similarly for other languages if added). For the MVP, we can:
+
+- start with a minimal hand-written `languages/apex/highlights.scm` that cleanly distinguishes comments/strings/keywords, then
+- selectively copy/adapt patterns from the upstream `apex/queries/highlights.scm` once the grammar is wired up and stable.
 
 ## 4) LSP wiring in Zed
 
