@@ -216,7 +216,8 @@ Salesforce Apex LSP behavior depends on project shape (`sfdx-project.json`, `pac
 Zed starts language servers per *worktree* (a directory project or a single-file worktree). Practically, this means:
 
 - Best supported: open the **project directory** as a Zed worktree (not just a standalone `.cls` file).
-- If you open a **single file** outside a directory worktree, there may be no `sfdx-project.json` available to the server, so LSP features can be missing or degraded.
+- If you open a **single file** outside a directory worktree, there is typically no `sfdx-project.json` at the worktree root.
+  For the MVP, that means **syntax highlighting will work, but the Apex LSP will not be started** (see Root discovery below).
 
 Zed also has a Restricted/Trusted worktree model:
 
@@ -237,7 +238,7 @@ Concrete examples of layouts we expect to work best:
 Concrete examples that are *not* a primary MVP target (may partially work, but not guaranteed):
 
 - “MDAPI-style” folders like `src/classes` without `sfdx-project.json`
-- Standalone `.apex` scripts outside an SFDX project (highlighting should work; LSP may be degraded)
+- Standalone `.apex` scripts outside an SFDX project (highlighting should work; **LSP will not be started in MVP**)
 
 If unsupported workspace is opened, extension should degrade gracefully:
 
@@ -310,7 +311,10 @@ Create an automated script (future `scripts/test-lsp-launch.sh`) that:
 
 1. Resolves Java path (setting/env simulation).
 2. Verifies jar existence, and if `vendor/apex-jorje-lsp.jar.sha256` exists, validates the checksum.
-3. Runs a short-lived Apex LSP launch smoke test (start process, wait for readiness markers/stdout behavior, terminate).
+3. Runs a short-lived Apex LSP launch smoke test:
+   - start the process
+   - perform a minimal LSP handshake over stdio (`initialize` -> expect a valid response -> `shutdown`/`exit`)
+   - terminate/cleanup
 
 This can be run by both humans and AI agents in CI/local.
 
