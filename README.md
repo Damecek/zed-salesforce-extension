@@ -21,12 +21,12 @@ Primary references for this architecture:
   https://zed.dev/docs/extensions/developing-extensions
 - Zed language extensions docs (grammar, `config.toml`, language servers):
   https://zed.dev/docs/extensions/languages
-- Salesforce Apex VS Code extension source (mirrored locally in `third_party`):
+- Salesforce Apex VS Code extension source (upstream):
   https://github.com/forcedotcom/salesforcedx-vscode.git
-- Key Salesforce Apex LSP bootstrap file:
-  `third_party/salesforcedx-vscode-apex/src/languageServer.ts`
-- Local jar artifact reference used by Salesforce extension:
-  `third_party/salesforcedx-vscode-apex/jars/apex-jorje-lsp.jar`
+- Key Salesforce Apex LSP bootstrap file (upstream path):
+  `packages/salesforcedx-vscode-apex/src/languageServer.ts`
+- Apex Language Server jar shipped by this extension:
+  `vendor/apex-jorje-lsp.jar`
 - Official Salesforce Apex Language Server docs:
   https://developer.salesforce.com/docs/platform/sfvscode-extensions/guide/apex-language-server.html
 - Official Salesforce Java setup docs for Apex LSP runtime:
@@ -70,7 +70,8 @@ Planned structure (high-level):
 │     └─ injections.scm          (optional, later)
 ├─ (no `grammars/` dir required; Tree-sitter grammars are fetched from Git repos declared in `extension.toml`)
 └─ vendor/
-   └─ apex-jorje-lsp.jar         (or runtime-downloaded cache)
+   ├─ apex-jorje-lsp.jar
+   └─ apex-jorje-lsp.jar.sha256  (integrity check, optional but recommended)
 ```
 
 ## 2) Language registration in Zed
@@ -183,26 +184,14 @@ In Rust extension code (`src/lib.rs`):
   - plus safe JVM args (`-Xmx` optional for memory control)
 - Set environment variables if needed.
 
-## 5) Apex jar sourcing options
+## 5) Apex jar sourcing (decision)
 
-Three viable options:
+For this project, we explicitly choose to **ship the jar inside the extension**:
 
-1. **Vendor jar in repo** (`vendor/apex-jorje-lsp.jar`)
-   - simplest startup
-   - deterministic
-   - larger repo size, update workflow needed
+- Default jar location: `vendor/apex-jorje-lsp.jar`
+- Optional integrity file: `vendor/apex-jorje-lsp.jar.sha256`
 
-2. **Download at runtime during first launch** (cache locally)
-   - smaller repo
-   - requires robust download, checksum verification, offline fallback
-
-3. **User-provided jar path via settings/env**
-   - lean extension but higher setup friction
-
-Recommended for MVP: **Option 1 or hybrid 1+3**:
-
-- Ship tested jar by default.
-- Allow override path for advanced users and debugging.
+Non-goal (for MVP): runtime download/caching. It adds failure modes (network/offline, trust, cache invalidation) without improving deterministic startup.
 
 ## 6) Java runtime acquisition strategy
 
@@ -245,7 +234,6 @@ If unsupported workspace is opened, extension should degrade gracefully:
 ## Nice to have (still close to MVP)
 
 - [ ] Configurable Java home and heap size.
-- [ ] Configurable jar path override.
 - [ ] Semantic tokens compatibility notes (`off` / `combined` / `full`).
 
 ## Out of MVP (next phases)
@@ -277,7 +265,7 @@ If unsupported workspace is opened, extension should degrade gracefully:
 Create an automated script (future `scripts/test-lsp-launch.sh`) that:
 
 1. Resolves Java path (setting/env simulation).
-2. Verifies jar existence + checksum (if checksum is maintained).
+2. Verifies jar existence, and if `vendor/apex-jorje-lsp.jar.sha256` exists, validates the checksum.
 3. Runs a short-lived Apex LSP launch smoke test (start process, wait for readiness markers/stdout behavior, terminate).
 
 This can be run by both humans and AI agents in CI/local.
@@ -308,9 +296,10 @@ Even if full GUI assertion is hard, log-based validation is practical for agents
 ## Relevant External Implementations to Study Further
 
 - Salesforce Apex VS Code extension startup and settings handling:
-  - `third_party/salesforcedx-vscode-apex/src/languageServer.ts`
-  - `third_party/salesforcedx-vscode-apex/src/requirements.ts`
-  - `third_party/salesforcedx-vscode-apex/src/languageUtils/apexLanguageConfiguration.ts`
+  - upstream repo: `forcedotcom/salesforcedx-vscode`
+  - `packages/salesforcedx-vscode-apex/src/languageServer.ts`
+  - `packages/salesforcedx-vscode-apex/src/requirements.ts`
+  - `packages/salesforcedx-vscode-apex/src/languageUtils/apexLanguageConfiguration.ts`
 - Zed extension language/LSP model docs:
   - https://zed.dev/docs/extensions/languages
 - LSP protocol reference (for capability alignment):

@@ -31,11 +31,13 @@ Use these as authoritative sources:
 - In addition to the URLs above, you may use the Context7 documentation server for Zed docs/source:
   - `websites/zed_dev`
   - `zed-industries/zed`
-- Local Salesforce Apex extension reference implementation:
+- Apex Language Server jar shipped by this extension:
+  - `vendor/apex-jorje-lsp.jar`
+  - `vendor/apex-jorje-lsp.jar.sha256`
+- Salesforce Apex VS Code extension reference implementation (upstream or temporary local mirror during MVP work):
   - `third_party/salesforcedx-vscode-apex/src/languageServer.ts`
   - `third_party/salesforcedx-vscode-apex/src/requirements.ts`
   - `third_party/salesforcedx-vscode-apex/src/languageUtils/apexLanguageConfiguration.ts`
-  - `third_party/salesforcedx-vscode-apex/jars/apex-jorje-lsp.jar`
 - Salesforce Apex Language Server docs:
   - https://developer.salesforce.com/docs/platform/sfvscode-extensions/guide/apex-language-server.html
   - https://developer.salesforce.com/docs/platform/sfvscode-extensions/guide/java-setup.html
@@ -56,7 +58,7 @@ When code implementation begins, contributors should generally work toward:
 - `src/lib.rs` implementing `language_server_command`
 - `languages/apex/config.toml`
 - `languages/apex/highlights.scm`
-- jar sourcing strategy (vendored jar and/or configurable override)
+- jar sourcing strategy (vendored jar)
 
 ## Java + Jar Runtime Expectations
 
