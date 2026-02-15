@@ -1,0 +1,4 @@
+name = "SOQL"
+grammar = "soql"
+path_suffixes = ["soql"]
+

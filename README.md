@@ -273,6 +273,7 @@ What changed:
 - Registered the Apex Tree-sitter grammar in `extension.toml` pinned to `tree-sitter-sfapex` commit `3597575a429766dd7ecce9f5bb97f6fec4419d5d`.
 - Added Apex language configuration in `languages/apex/config.toml` with file suffixes `.cls`, `.trigger`, and `.apex`.
 - Added baseline syntax highlighting query in `languages/apex/highlights.scm` sourced from upstream pinned grammar revision.
+- Registered SOQL/SOSL/Salesforce Log grammars and added language configs + highlights for `.soql`, `.sosl`, and `.sflog` (and `.log`).
 
 Why:
 
@@ -358,6 +359,7 @@ Even if full GUI assertion is hard, log-based validation is practical for agents
 ## D) Manual acceptance checklist
 
 - Open Apex file: syntax colors clearly distinguish comments, keywords, strings.
+- Open `.soql` / `.sosl` / `.sflog` files: basic highlighting works.
 - LSP starts without configuration surprises on Java 21.
 - At least one of: diagnostics / completion / go-to-definition works.
 - Failure mode with invalid Java path yields clear instruction.

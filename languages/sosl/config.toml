@@ -1,0 +1,4 @@
+name = "SOSL"
+grammar = "sosl"
+path_suffixes = ["sosl"]
+

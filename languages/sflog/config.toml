@@ -1,0 +1,4 @@
+name = "Salesforce Log"
+grammar = "sflog"
+path_suffixes = ["sflog", "log"]
+

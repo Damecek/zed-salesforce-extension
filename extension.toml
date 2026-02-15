@@ -1,6 +1,6 @@
 id = "apex"
 name = "Apex"
-version = "0.0.1"
+version = "0.0.2"
 schema_version = 1
 authors = ["zed-apex-lsp-extension contributors"]
 description = "Salesforce Apex language support for Zed (MVP bootstrap)."
@@ -10,3 +10,18 @@ repository = "https://github.com/aheber/tree-sitter-sfapex"
 rev = "3597575a429766dd7ecce9f5bb97f6fec4419d5d"
 # tree-sitter-sfapex is a multi-grammar repo; Apex grammar lives in the `apex/` subdir.
 path = "apex"
+
+[grammars.soql]
+repository = "https://github.com/aheber/tree-sitter-sfapex"
+rev = "3597575a429766dd7ecce9f5bb97f6fec4419d5d"
+path = "soql"
+
+[grammars.sosl]
+repository = "https://github.com/aheber/tree-sitter-sfapex"
+rev = "3597575a429766dd7ecce9f5bb97f6fec4419d5d"
+path = "sosl"
+
+[grammars.sflog]
+repository = "https://github.com/aheber/tree-sitter-sfapex"
+rev = "3597575a429766dd7ecce9f5bb97f6fec4419d5d"
+path = "sflog"
