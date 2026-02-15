@@ -5,6 +5,13 @@ schema_version = 1
 authors = ["zed-apex-lsp-extension contributors"]
 description = "Salesforce Apex language support for Zed (MVP bootstrap)."
 
+[language_servers.apex-lsp]
+name = "Apex Language Server"
+languages = ["Apex"]
+
+[language_servers.apex-lsp.language_ids]
+"Apex" = "apex"
+
 [grammars.apex]
 repository = "https://github.com/aheber/tree-sitter-sfapex"
 rev = "3597575a429766dd7ecce9f5bb97f6fec4419d5d"

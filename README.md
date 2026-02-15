@@ -31,6 +31,8 @@ Primary references for this architecture:
   https://developer.salesforce.com/docs/platform/sfvscode-extensions/guide/apex-language-server.html
 - Official Salesforce Java setup docs for Apex LSP runtime:
   https://developer.salesforce.com/docs/platform/sfvscode-extensions/guide/java-setup.html
+- Language Server Protocol (LSP) specification:
+  https://github.com/microsoft/language-server-protocol
 
 ## What We Learn from Existing Salesforce Implementation
 
@@ -183,21 +185,22 @@ In Rust extension code (`src/lib.rs`):
   - `args`: `-cp <path-to-jar> apex.jorje.lsp.ApexLanguageServerLauncher`
   - plus safe JVM args (`-Xmx` optional for memory control)
 - Set environment variables if needed.
+- Note: Apex LSP currently relies on the deprecated LSP `rootPath` field. Zed may only send `rootUri`,
+  so this extension runs a tiny stdio proxy that injects `rootPath` based on the worktree root to
+  prevent Apex LSP from crashing when initializing its `.sfdx/tools/...` DB.
 
 ## 5) Apex jar sourcing (decision)
 
-For this project, we explicitly choose to **ship the jar inside the extension**:
+For this project, we **ship the jar inside the extension** for deterministic, versioned behavior.
 
-- Default jar location: `vendor/apex-jorje-lsp.jar`
-- Optional integrity file: `vendor/apex-jorje-lsp.jar.sha256`
-
-Non-goal (for MVP): runtime download/caching. It adds failure modes (network/offline, trust, cache invalidation) without improving deterministic startup.
+- Vendored jar in this repo: `vendor/apex-jorje-lsp.jar` (+ SHA in `vendor/apex-jorje-lsp.jar.sha256`)
+- Runtime jar path used by the extension: `extensions/installed/apex/vendor/apex-jorje-lsp.jar`
 
 ## 6) Java runtime acquisition strategy
 
 Required capability in extension logic:
 
-- Prefer explicit extension setting (e.g. `apex.java.home`).
+- Prefer explicit Zed LSP setting for this server (e.g. `lsp.apex-lsp.binary.path` pointing to a `java` executable).
 - Fallback to `JDK_HOME`, then `JAVA_HOME`.
 - Validate:
   - directory exists

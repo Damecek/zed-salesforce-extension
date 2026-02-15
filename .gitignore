@@ -25,3 +25,4 @@ salesforcedx-vscode/
 
 fixtures/
 grammars/
+*.wasm
