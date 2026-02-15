@@ -1,0 +1,5 @@
+version: 1
+display_name: Zed Apex Docs
+short_description: Research workflow for Zed + Apex LSP using Context7 and primary sources
+default_prompt: Use the zed-apex-docs workflow to answer the question using Context7 first, then the listed authoritative web sources if needed, and cross-check against local third_party/vendor references when relevant. Provide exact conclusions and cite sources.
+
