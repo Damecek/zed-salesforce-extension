@@ -62,7 +62,6 @@
 "<=" @operator
 (value_comparison_operator ">" @operator)
 ">=" @operator
- @operator
 (set_comparison_operator "IN" @operator)
 
 (int) @number
