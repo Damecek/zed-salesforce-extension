@@ -22,3 +22,5 @@ target
 
 # Local clones (not vendored)
 salesforcedx-vscode/
+
+fixtures/

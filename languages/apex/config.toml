@@ -1,0 +1,4 @@
+name = "Apex"
+grammar = "apex"
+path_suffixes = ["cls", "trigger", "apex"]
+line_comments = ["// "]

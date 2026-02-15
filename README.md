@@ -264,14 +264,35 @@ For deterministic behavior, the extension should parse `sfdx-project.json` from 
 
 If parsing fails (invalid JSON), the extension should not start LSP and should log an actionable parse error.
 
+
+## MVP Progress Update (Part 1: without LSP)
+
+What changed:
+
+- Added a minimal Zed extension scaffold (`extension.toml`, `Cargo.toml`, `src/lib.rs`).
+- Registered the Apex Tree-sitter grammar in `extension.toml` pinned to `tree-sitter-sfapex` commit `3597575a429766dd7ecce9f5bb97f6fec4419d5d`.
+- Added Apex language configuration in `languages/apex/config.toml` with file suffixes `.cls`, `.trigger`, and `.apex`.
+- Added baseline syntax highlighting query in `languages/apex/highlights.scm` sourced from upstream pinned grammar revision.
+
+Why:
+
+- This implements the first MVP slice (language recognition + deterministic baseline highlighting) while intentionally deferring language server startup to the next phase.
+
+How to verify:
+
+1. Run `cargo check` to validate Rust extension scaffold builds.
+2. Validate TOML syntax (e.g. parse `extension.toml` and `languages/apex/config.toml`).
+3. Install as a dev extension in Zed and open `.cls` / `.trigger` / `.apex` files.
+4. Confirm Apex mode is selected and comments/keywords/strings are highlighted.
+
 ## MVP Scope (Phase 1)
 
 ## Must have
 
-- [ ] Zed extension skeleton (`extension.toml`, Rust entrypoint).
-- [ ] Apex language registration (`languages/apex/config.toml`).
-- [ ] Tree-sitter grammar registration for Apex.
-- [ ] Basic `highlights.scm` with comments/code distinction and common token classes.
+- [x] Zed extension skeleton (`extension.toml`, Rust entrypoint).
+- [x] Apex language registration (`languages/apex/config.toml`).
+- [x] Tree-sitter grammar registration for Apex.
+- [x] Basic `highlights.scm` with comments/code distinction and common token classes.
 - [ ] LSP process launch path for Apex jar + Java.
 - [ ] Startup validation and meaningful failure logs.
 - [ ] Basic manual test instructions.
