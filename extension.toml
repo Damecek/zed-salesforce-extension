@@ -4,6 +4,7 @@ version = "0.0.2"
 schema_version = 1
 authors = ["zed-salesforce-extension contributors"]
 description = "Salesforce DX language support for Zed (MVP bootstrap; Apex LSP backend)."
+repository = "https://github.com/Damecek/zed-salesforce-extension"
 
 [language_servers.apex-lsp]
 name = "Apex Language Server"
