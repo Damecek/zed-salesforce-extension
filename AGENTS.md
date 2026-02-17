@@ -34,10 +34,8 @@ Use these as authoritative sources:
 - Apex Language Server jar currently shipped by this extension:
   - `vendor/apex-jorje-lsp.jar`
   - `vendor/apex-jorje-lsp.jar.sha256`
-- Salesforce VS Code Apex extension reference implementation (upstream or temporary local mirror during MVP work):
-  - `third_party/salesforcedx-vscode-apex/src/languageServer.ts`
-  - `third_party/salesforcedx-vscode-apex/src/requirements.ts`
-  - `third_party/salesforcedx-vscode-apex/src/languageUtils/apexLanguageConfiguration.ts`
+- Salesforce VS Code Apex extension reference implementation (upstream):
+  - https://github.com/forcedotcom/salesforcedx-vscode/tree/main/packages/salesforcedx-vscode-apex/src
 - Salesforce Apex Language Server docs:
   - https://developer.salesforce.com/docs/platform/sfvscode-extensions/guide/apex-language-server.html
   - https://developer.salesforce.com/docs/platform/sfvscode-extensions/guide/java-setup.html

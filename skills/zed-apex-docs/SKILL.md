@@ -34,11 +34,7 @@ When quoting, keep excerpts short; prefer paraphrase + citation.
 
 ## Local Repo “Source of Truth” Files
 
-Prefer local mirrors when available (stable, works offline):
-- Apex VS Code reference implementation (current LSP backend):
-  - `third_party/salesforcedx-vscode-apex/src/languageServer.ts`
-  - `third_party/salesforcedx-vscode-apex/src/requirements.ts`
-  - `third_party/salesforcedx-vscode-apex/src/languageUtils/apexLanguageConfiguration.ts`
+Prefer local vendored/runtime assets when available (stable, works offline):
 - Vendored jar:
   - `vendor/apex-jorje-lsp.jar`
   - `vendor/apex-jorje-lsp.jar.sha256`

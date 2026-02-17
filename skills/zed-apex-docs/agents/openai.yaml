@@ -1,4 +1,4 @@
 version: 1
 display_name: Zed Salesforce DX Docs
 short_description: Research workflow for Zed + Salesforce DX language tooling (Apex LSP backend today) using Context7 and primary sources
-default_prompt: Use the zed-apex-docs workflow to answer the question using Context7 first, then the listed authoritative web sources if needed, and cross-check against local third_party/vendor references when relevant. Treat Apex LSP as the current backend and frame conclusions in Salesforce DX extension scope. Provide exact conclusions and cite sources.
+default_prompt: Use the zed-apex-docs workflow to answer the question using Context7 first, then the listed authoritative web sources if needed, and cross-check against local vendor references when relevant. Treat Apex LSP as the current backend and frame conclusions in Salesforce DX extension scope. Provide exact conclusions and cite sources.
