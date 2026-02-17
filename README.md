@@ -1,15 +1,15 @@
-# zed-apex-lsp-extension
+# zed-salesforce-extension
 
-Salesforce Apex language support for the Zed editor, based on Salesforce's Apex Language Server (`apex-jorje-lsp.jar`) and Zed's extension model.
+Salesforce DX language support for the Zed editor. The current implementation uses Salesforce's Apex Language Server (`apex-jorje-lsp.jar`) for Apex while the extension scope covers additional Salesforce languages (SOQL/SOSL/logs today, LWC/Aura/Visualforce next).
 
 ## Project Goal
 
-Build a **Zed extension** that enables Apex development with a practical MVP:
+Build a **Zed extension** that enables Salesforce DX development with a practical MVP:
 
-- Apex files are recognized in Zed.
+- Salesforce source files are recognized in Zed (current: Apex + SOQL/SOSL/logs).
 - Basic syntax highlighting works (comments vs code, keywords, strings, etc.).
-- Apex Language Server (LSP) starts successfully.
-- Core LSP features are available (at minimum diagnostics and completion if server/workspace supports them).
+- Apex Language Server (LSP) starts successfully for Apex files.
+- Core LSP features are available where the active backend supports them (at minimum diagnostics and completion).
 
 This repository currently focuses on **architecture and implementation planning** (not full implementation yet).
 
@@ -21,15 +21,15 @@ Primary references for this architecture:
   https://zed.dev/docs/extensions/developing-extensions
 - Zed language extensions docs (grammar, `config.toml`, language servers):
   https://zed.dev/docs/extensions/languages
-- Salesforce Apex VS Code extension source (upstream):
+- Salesforce VS Code extension source (upstream):
   https://github.com/forcedotcom/salesforcedx-vscode.git
-- Key Salesforce Apex LSP bootstrap file (upstream path):
+- Key Apex LSP bootstrap file (upstream path):
   `packages/salesforcedx-vscode-apex/src/languageServer.ts`
-- Apex Language Server jar shipped by this extension:
+- Apex Language Server jar currently shipped by this extension:
   `vendor/apex-jorje-lsp.jar`
 - Official Salesforce Apex Language Server docs:
   https://developer.salesforce.com/docs/platform/sfvscode-extensions/guide/apex-language-server.html
-- Official Salesforce Java setup docs for Apex LSP runtime:
+- Official Salesforce Java setup docs for Apex runtime:
   https://developer.salesforce.com/docs/platform/sfvscode-extensions/guide/java-setup.html
 - Language Server Protocol (LSP) specification:
   https://github.com/microsoft/language-server-protocol
@@ -49,7 +49,7 @@ From `requirements.ts` + Salesforce Java setup docs:
 
 - Java path resolution strategy should support explicit config + env vars (`JAVA_HOME` / `JDK_HOME`).
 - Java runtime check should verify executable presence and supported version.
-- Apex LSP requires Java 11+; Salesforce recommends Java 21.
+- The Apex LSP backend requires Java 11+; Salesforce recommends Java 21.
 
 ## Target Zed Extension Architecture
 
@@ -85,7 +85,7 @@ Implement `languages/apex/config.toml` with:
 - `path_suffixes = ["cls", "trigger", "apex"]`
 - `line_comments = ["// "]`
 
-This gives file association + comment behavior and is required before deeper LSP integration.
+This gives Apex file association + comment behavior and is required before deeper LSP integration.
 
 ### Tree-sitter grammar (chosen implementation)
 
@@ -94,7 +94,7 @@ This extension uses the `tree-sitter-sfapex` grammar repository, pinned to a spe
 - Repository: `https://github.com/aheber/tree-sitter-sfapex`
 - Pinned commit (rev): `3597575a429766dd7ecce9f5bb97f6fec4419d5d`
 
-Zed loads Tree-sitter grammars that are registered in `extension.toml`. Minimal registration for Apex:
+Zed loads Tree-sitter grammars that are registered in `extension.toml`. Apex is one registered language in a broader Salesforce DX extension.
 
 ```toml
 # extension.toml
@@ -174,7 +174,7 @@ If the pinned `rev` changes, re-sync the query files from upstream in the same P
 
 In `extension.toml`:
 
-- Define language server entry (e.g. `[language_servers.apex-lsp]`).
+- Define language server entry for Apex (e.g. `[language_servers.apex-lsp]`).
 - Map it to language `Apex`.
 
 In Rust extension code (`src/lib.rs`):
@@ -185,16 +185,16 @@ In Rust extension code (`src/lib.rs`):
   - `args`: `-cp <path-to-jar> apex.jorje.lsp.ApexLanguageServerLauncher`
   - plus safe JVM args (`-Xmx` optional for memory control)
 - Set environment variables if needed.
-- Note: Apex LSP currently relies on the deprecated LSP `rootPath` field. Zed may only send `rootUri`,
+- Note: the current Apex LSP backend relies on the deprecated LSP `rootPath` field. Zed may only send `rootUri`,
   so this extension runs a tiny stdio proxy that injects `rootPath` based on the worktree root to
   prevent Apex LSP from crashing when initializing its `.sfdx/tools/...` DB.
 
-## 5) Apex jar sourcing (decision)
+## 5) Current Apex jar sourcing (decision)
 
 For this project, we **ship the jar inside the extension** for deterministic, versioned behavior.
 
 - Vendored jar in this repo: `vendor/apex-jorje-lsp.jar` (+ SHA in `vendor/apex-jorje-lsp.jar.sha256`)
-- Runtime jar path used by the extension: `extensions/installed/apex/vendor/apex-jorje-lsp.jar`
+- Runtime jar path used by the extension: `extensions/installed/salesforce/vendor/apex-jorje-lsp.jar`
 
 ## 6) Java runtime acquisition strategy
 
@@ -212,7 +212,7 @@ Recommended docs for users should include Java 21 guidance (consistent with Sale
 
 ## 7) Workspace assumptions and limitations
 
-Salesforce Apex LSP behavior depends on project shape (`sfdx-project.json`, `packageDirectories`, and Salesforce DX metadata layout). For MVP, we need to be explicit about what we do (and do not) support so startup is deterministic.
+Salesforce DX language tooling behavior depends on project shape (`sfdx-project.json`, `packageDirectories`, and Salesforce DX metadata layout). For MVP, we need to be explicit about what we do (and do not) support so startup is deterministic.
 
 ### Zed worktree model (important)
 
@@ -220,7 +220,7 @@ Zed starts language servers per *worktree* (a directory project or a single-file
 
 - Best supported: open the **project directory** as a Zed worktree (not just a standalone `.cls` file).
 - If you open a **single file** outside a directory worktree, there is typically no `sfdx-project.json` at the worktree root.
-  For the MVP, that means **syntax highlighting will work, but the Apex LSP will not be started** (see Root discovery below).
+  For the MVP, that means **syntax highlighting will work, but Apex LSP will not be started** (see Root discovery below).
 
 Zed also has a Restricted/Trusted worktree model:
 
@@ -230,7 +230,7 @@ Zed also has a Restricted/Trusted worktree model:
 ### Supported workspace profile (MVP)
 
 - Primary target: an **SFDX project root** opened as the worktree root, containing `sfdx-project.json` at the top level.
-- Apex source files are located according to Salesforce DX conventions, e.g. within one of the `packageDirectories` roots (commonly `force-app/main/default/...`).
+- Apex and related Salesforce DX source files are located according to Salesforce DX conventions, e.g. within one of the `packageDirectories` roots (commonly `force-app/main/default/...`).
 
 Concrete examples of layouts we expect to work best:
 
@@ -250,7 +250,7 @@ If unsupported workspace is opened, extension should degrade gracefully:
 
 ### Explicit limitations (MVP)
 
-- Multi-root setups: Zed can have multiple worktrees open. The MVP assumes Apex LSP is started independently per worktree and does not attempt cross-worktree indexing.
+- Multi-root setups: Zed can have multiple worktrees open. The MVP assumes language servers are started independently per worktree and does not attempt cross-worktree indexing.
 - Root discovery: the MVP requires `sfdx-project.json` to exist at the *worktree root*. If it is missing, the extension should not start the language server and should emit a clear error suggesting to open the SFDX project root folder.
 - Org-dependent features (auth files, namespace from org, etc.) are out of scope. The VS Code implementation uses the Salesforce Core extension to derive org namespace and other context; we will not replicate that during MVP.
 - Restricted worktrees: the MVP should not start any external process (including Java) until the worktree is trusted, aligning with Zed’s supply-chain safety posture.
@@ -259,7 +259,7 @@ If unsupported workspace is opened, extension should degrade gracefully:
 
 For deterministic behavior, the extension should parse `sfdx-project.json` from the worktree root and use only a minimal set of keys:
 
-- `packageDirectories`: determine which folder roots constitute “source packages” for Apex. This is used for:
+- `packageDirectories`: determine which folder roots constitute Salesforce DX source packages. This is used for:
   - validation and error messages (e.g. warn when a `.cls` is outside any package directory)
   - future: limit file watching/index scope if needed
 - `namespace`: used only for user-facing messaging and (future) LSP UX parity behaviors; we do not assume org namespace access in MVP.
@@ -276,7 +276,7 @@ What changed:
 - Registered the Apex Tree-sitter grammar in `extension.toml` pinned to `tree-sitter-sfapex` commit `3597575a429766dd7ecce9f5bb97f6fec4419d5d`.
 - Added Apex language configuration in `languages/apex/config.toml` with file suffixes `.cls`, `.trigger`, and `.apex`.
 - Added baseline syntax highlighting query in `languages/apex/highlights.scm` sourced from upstream pinned grammar revision.
-- Registered SOQL/SOSL/Salesforce Log grammars and added language configs + highlights for `.soql`, `.sosl`, and `.sflog` (and `.log`).
+- Registered SOQL/SOSL/Salesforce Log grammars and added language configs + highlights for `.soql`, `.sosl`, and `.sflog` (and `.log`) as part of broader Salesforce DX language support.
 
 Why:
 
@@ -294,8 +294,8 @@ How to verify:
 ## Must have
 
 - [x] Zed extension skeleton (`extension.toml`, Rust entrypoint).
-- [x] Apex language registration (`languages/apex/config.toml`).
-- [x] Tree-sitter grammar registration for Apex.
+- [x] Apex language registration (`languages/apex/config.toml`) as part of Salesforce DX language coverage.
+- [x] Tree-sitter grammar registration for Salesforce DX languages (Apex/SOQL/SOSL/SF log).
 - [x] Basic `highlights.scm` with comments/code distinction and common token classes.
 - [ ] LSP process launch path for Apex jar + Java.
 - [ ] Startup validation and meaningful failure logs.
@@ -308,7 +308,7 @@ How to verify:
 
 ## Out of MVP (next phases)
 
-- Advanced code lenses, Apex-specific commands, log tooling.
+- Advanced code lenses, language-specific commands (Apex/LWC/Aura/VF), log tooling.
 - Org-specific indexing and search.
 - Embedded SOQL enhancements.
 - Deep index lifecycle controls (restart/reset UX parity).
@@ -318,7 +318,7 @@ How to verify:
 1. **Scaffold extension** and install as dev extension in Zed.
 2. **Language + grammar integration** and verify highlighting.
 3. **Java + jar launcher** in `language_server_command`.
-4. **Open sample Apex project** and validate LSP handshake/startup.
+4. **Open sample Salesforce DX project** and validate LSP handshake/startup.
 5. **Stabilize diagnostics + completion** on representative files.
 6. **Document known constraints** and troubleshooting.
 
@@ -336,7 +336,7 @@ Create an automated script (future `scripts/test-lsp-launch.sh`) that:
 
 1. Resolves Java path (setting/env simulation).
 2. Verifies jar existence, and if `vendor/apex-jorje-lsp.jar.sha256` exists, validates the checksum.
-3. Runs a short-lived Apex LSP launch smoke test:
+3. Runs a short-lived Apex LSP launch smoke test (current backend):
    - start the process
    - perform a minimal LSP handshake over stdio (`initialize` -> expect a valid response -> `shutdown`/`exit`)
    - terminate/cleanup
@@ -381,11 +381,11 @@ Even if full GUI assertion is hard, log-based validation is practical for agents
 
 ## Architecture Decisions (Current)
 
-- Primary LSP engine: Salesforce `apex-jorje-lsp.jar`.
+- Current LSP engine (Apex): Salesforce `apex-jorje-lsp.jar`.
 - Runtime: Java (11+ required, Java 21 recommended).
 - Editor integration: Zed extension with Rust `language_server_command` launcher.
 - Highlighting baseline: Tree-sitter (`highlights.scm`), semantic tokens optional enhancement.
-- MVP goal: reliable startup + baseline coding ergonomics before advanced Salesforce features.
+- MVP goal: reliable startup + baseline coding ergonomics across Salesforce DX languages before advanced features.
 
 ## Notes for Next Contributors
 

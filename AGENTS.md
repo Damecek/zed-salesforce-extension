@@ -4,7 +4,7 @@ Guidance for AI/human contributors working in this repository.
 
 ## Mission Context
 
-This repository defines a **Zed extension for Salesforce Apex** backed by Salesforce's Java-based Apex Language Server (`apex-jorje-lsp.jar`).
+This repository defines a **Zed extension for Salesforce DX languages**. The current LSP backend is Salesforce's Java-based Apex Language Server (`apex-jorje-lsp.jar`) for Apex support.
 
 Current project stage is architecture-first:
 
@@ -13,12 +13,12 @@ Current project stage is architecture-first:
 
 ## Primary Objective (MVP)
 
-Deliver a minimal but functional Apex experience in Zed:
+Deliver a minimal but functional Salesforce DX experience in Zed:
 
-1. Apex file recognition (`.cls`, `.trigger`, `.apex`)
+1. Salesforce DX file recognition (current MVP: `.cls`, `.trigger`, `.apex`, `.soql`, `.sosl`, `.sflog`/`.log`)
 2. Baseline syntax highlighting (especially comment vs code distinction)
-3. Apex LSP process starts successfully through Java
-4. Basic LSP functionality works (diagnostics/completion at minimum where supported)
+3. Apex LSP process starts successfully through Java for Apex files
+4. Basic LSP functionality works (diagnostics/completion at minimum where supported by the active backend)
 
 ## Core References
 
@@ -31,10 +31,10 @@ Use these as authoritative sources:
 - In addition to the URLs above, you may use the Context7 documentation server for Zed docs/source:
   - `websites/zed_dev`
   - `zed-industries/zed`
-- Apex Language Server jar shipped by this extension:
+- Apex Language Server jar currently shipped by this extension:
   - `vendor/apex-jorje-lsp.jar`
   - `vendor/apex-jorje-lsp.jar.sha256`
-- Salesforce Apex VS Code extension reference implementation (upstream or temporary local mirror during MVP work):
+- Salesforce VS Code Apex extension reference implementation (upstream or temporary local mirror during MVP work):
   - `third_party/salesforcedx-vscode-apex/src/languageServer.ts`
   - `third_party/salesforcedx-vscode-apex/src/requirements.ts`
   - `third_party/salesforcedx-vscode-apex/src/languageUtils/apexLanguageConfiguration.ts`
@@ -49,6 +49,7 @@ Use these as authoritative sources:
 - Preserve clear fallback/error messages for Java/jar misconfiguration.
 - Favor Tree-sitter highlighting as baseline; treat semantic tokens as additive.
 - Document all assumptions, especially workspace assumptions around `sfdx-project.json`.
+- Keep language scope explicit: Apex is the first LSP-backed language, while LWC/Aura/Visualforce are planned expansion areas.
 
 ## Expected Implementation Shape
 
@@ -58,6 +59,7 @@ When code implementation begins, contributors should generally work toward:
 - `src/lib.rs` implementing `language_server_command`
 - `languages/apex/config.toml`
 - `languages/apex/highlights.scm`
+- `languages/soql|sosl|sflog/*` baseline language metadata/highlighting
 - jar sourcing strategy (vendored jar)
 
 ## Java + Jar Runtime Expectations
@@ -87,5 +89,5 @@ If a test cannot be executed in current environment, state exact limitation and 
 ## Non-goals at this stage
 
 - Full parity with Salesforce VS Code extension UX
-- Advanced Apex commands/tooling beyond baseline LSP
+- Advanced language-specific commands/tooling beyond baseline LSP
 - Large-scale optimization before reliability is proven

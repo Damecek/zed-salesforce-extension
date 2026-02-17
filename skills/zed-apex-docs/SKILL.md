@@ -1,9 +1,9 @@
 ---
 name: zed-apex-docs
-description: Use when working on this repository (Zed Apex LSP extension) and you need up-to-date or authoritative information about Zed extension APIs/docs, language server integration, the Language Server Protocol, Salesforce Apex Language Server behavior, or the Salesforce VS Code Apex extension reference implementation. This skill provides a repeatable research workflow using Context7 and a small set of authoritative web sources, plus local repo reference paths.
+description: Use when working on this repository (Zed Salesforce DX extension) and you need up-to-date or authoritative information about Zed extension APIs/docs, language server integration, the Language Server Protocol, Salesforce language tooling behavior (Apex today; LWC/Aura/Visualforce scope planning), or the Salesforce VS Code reference implementations. This skill provides a repeatable research workflow using Context7 and a small set of authoritative web sources, plus local repo reference paths.
 ---
 
-# Zed Apex Docs Research Workflow
+# Zed Salesforce DX Docs Research Workflow
 
 ## Context7 (preferred for up-to-date docs/source)
 
@@ -21,7 +21,7 @@ Suggested query patterns:
 - Zed extension API usage: “`zed_extension_api` language server command example”, “register language server in extension.toml”
 - Zed languages: “languages config.toml schema”, “highlights.scm tree-sitter queries”
 - LSP spec: “initialize params capabilities”, “textDocument/completion request response”, “diagnostics publishDiagnostics”
-- Salesforce VS Code: “apex language server start command”, “java requirements resolution order”
+- Salesforce VS Code: “apex language server start command”, “java requirements resolution order”, “salesforcedx-vscode package structure”
 
 ## Authoritative Web Sources (use when Context7 is insufficient)
 
@@ -35,7 +35,7 @@ When quoting, keep excerpts short; prefer paraphrase + citation.
 ## Local Repo “Source of Truth” Files
 
 Prefer local mirrors when available (stable, works offline):
-- Apex VS Code reference implementation:
+- Apex VS Code reference implementation (current LSP backend):
   - `third_party/salesforcedx-vscode-apex/src/languageServer.ts`
   - `third_party/salesforcedx-vscode-apex/src/requirements.ts`
   - `third_party/salesforcedx-vscode-apex/src/languageUtils/apexLanguageConfiguration.ts`
@@ -48,4 +48,4 @@ Prefer local mirrors when available (stable, works offline):
 When you answer a question based on research:
 1. State the concrete conclusion (exact API names/fields/commands).
 2. Cite the source(s): Context7 snippet reference (if available) or web citations.
-3. Note any version constraints/assumptions (Zed version, Java version, Apex LS version).
+3. Note any version constraints/assumptions (Zed version, Java version, Apex LS version, Salesforce DX package version when relevant).

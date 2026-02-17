@@ -1,5 +1,5 @@
 [package]
-name = "zed_apex"
+name = "zed_salesforce"
 version = "0.0.1"
 edition = "2021"
 publish = false

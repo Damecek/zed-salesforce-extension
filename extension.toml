@@ -1,9 +1,9 @@
-id = "apex"
-name = "Apex"
+id = "salesforce"
+name = "Salesforce DX"
 version = "0.0.2"
 schema_version = 1
-authors = ["zed-apex-lsp-extension contributors"]
-description = "Salesforce Apex language support for Zed (MVP bootstrap)."
+authors = ["zed-salesforce-extension contributors"]
+description = "Salesforce DX language support for Zed (MVP bootstrap; Apex LSP backend)."
 
 [language_servers.apex-lsp]
 name = "Apex Language Server"

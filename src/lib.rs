@@ -2,6 +2,7 @@ use zed_extension_api as zed;
 
 use std::collections::HashSet;
 
+const EXTENSION_ID: &str = "salesforce";
 const APEX_LSP_ID: &str = "apex-lsp";
 const APEX_LSP_MAIN_CLASS: &str = "apex.jorje.lsp.ApexLanguageServerLauncher";
 const APEX_LSP_JAR_REL_PATH: &str = "vendor/apex-jorje-lsp.jar";
@@ -148,11 +149,11 @@ if __name__ == "__main__":
     sys.exit(main())
 "#;
 
-struct ApexExtension {
+struct SalesforceExtension {
     warned_missing_sfdx: HashSet<u64>,
 }
 
-impl zed::Extension for ApexExtension {
+impl zed::Extension for SalesforceExtension {
     fn new() -> Self {
         Self {
             warned_missing_sfdx: HashSet::new(),
@@ -174,7 +175,7 @@ impl zed::Extension for ApexExtension {
             let id = worktree.id();
             if self.warned_missing_sfdx.insert(id) {
                 eprintln!(
-                    "[apex] Apex LSP not started: `{SFDX_PROJECT_JSON}` not found at worktree root ({}). Open the SFDX project root folder to enable LSP.",
+                    "[salesforce] Apex LSP not started: `{SFDX_PROJECT_JSON}` not found at worktree root ({}). Open the Salesforce DX project root folder to enable LSP.",
                     worktree.root_path()
                 );
             }
@@ -206,7 +207,7 @@ impl zed::Extension for ApexExtension {
     }
 }
 
-zed::register_extension!(ApexExtension);
+zed::register_extension!(SalesforceExtension);
 
 fn resolve_apex_lsp_jar_path() -> zed::Result<String> {
     // Important: the extension runs in a WASI sandbox. It cannot reliably stat/read files outside
@@ -222,7 +223,7 @@ fn resolve_apex_lsp_jar_path() -> zed::Result<String> {
     let installed_dir = work_dir
         .parent()
         .and_then(|p| p.parent())
-        .map(|extensions_dir| extensions_dir.join("installed").join("apex"))
+        .map(|extensions_dir| extensions_dir.join("installed").join(EXTENSION_ID))
         .ok_or_else(|| format!("Could not derive extension installed directory from {}", work_dir.display()))?;
 
     Ok(installed_dir

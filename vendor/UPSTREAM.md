@@ -1,6 +1,6 @@
-# Apex LSP Jar Provenance
+# Apex LSP Jar Provenance (Current Salesforce DX Backend)
 
-This extension vendors the Salesforce Apex Language Server jar as:
+This extension currently vendors the Salesforce Apex Language Server jar as the Apex backend within a broader Salesforce DX extension:
 
 - `vendor/apex-jorje-lsp.jar`
 - SHA-256 (hex) in `vendor/apex-jorje-lsp.jar.sha256`
@@ -17,4 +17,3 @@ The jar was copied from the Salesforce VS Code extensions monorepo (Apex package
 ## Licensing
 
 See `vendor/LICENSE.salesforcedx-vscode-apex.txt`.
-
