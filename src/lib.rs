@@ -3,7 +3,7 @@ use zed_extension_api::serde_json;
 
 use std::collections::HashSet;
 
-const EXTENSION_ID: &str = "salesforce";
+const EXTENSION_ID: &str = "salesforce-dx";
 const APEX_LSP_ID: &str = "apex-lsp";
 const APEX_LSP_MAIN_CLASS: &str = "apex.jorje.lsp.ApexLanguageServerLauncher";
 const APEX_LSP_JAR_REL_PATH: &str = "vendor/apex-jorje-lsp.jar";
