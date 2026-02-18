@@ -23,6 +23,8 @@ target
 # Local clones (not vendored)
 salesforcedx-vscode/
 
-fixtures/
-grammars/
+/fixtures/
+/grammars/
+/scripts/__pycache__/
+/scripts/fixtures/sfdx-minimal/.sfdx/
 *.wasm

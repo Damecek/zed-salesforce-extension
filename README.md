@@ -11,7 +11,7 @@ Build a **Zed extension** that enables Salesforce DX development with a practica
 - Apex Language Server (LSP) starts successfully for Apex files.
 - Core LSP features are available where the active backend supports them (at minimum diagnostics and completion).
 
-This repository currently focuses on **architecture and implementation planning** (not full implementation yet).
+This repository is in **MVP bootstrap implementation**: core language support and Apex LSP startup wiring are in place, with validation/operational hardening still in progress.
 
 ## Source Documentation and Inputs
 
@@ -268,7 +268,7 @@ For deterministic behavior, the extension should parse `sfdx-project.json` from 
 If parsing fails (invalid JSON), the extension should not start LSP and should log an actionable parse error.
 
 
-## MVP Progress Update (Part 1: without LSP)
+## MVP Progress Update
 
 What changed:
 
@@ -277,17 +277,23 @@ What changed:
 - Added Apex language configuration in `languages/apex/config.toml` with file suffixes `.cls`, `.trigger`, and `.apex`.
 - Added baseline syntax highlighting query in `languages/apex/highlights.scm` sourced from upstream pinned grammar revision.
 - Registered SOQL/SOSL/Salesforce Log grammars and added language configs + highlights for `.soql`, `.sosl`, and `.sflog` (and `.log`) as part of broader Salesforce DX language support.
+- Implemented Apex LSP launch command wiring in `src/lib.rs` (Java resolution + vendored jar launch).
+- Added a rootPath-injecting stdio proxy for Apex LSP initialize compatibility.
+- Added deterministic smoke test automation:
+  - `scripts/test-lsp-launch.sh`
+  - `scripts/lsp_smoke.py`
+  - fixture workspace at `scripts/fixtures/sfdx-minimal/`
 
 Why:
 
-- This implements the first MVP slice (language recognition + deterministic baseline highlighting) while intentionally deferring language server startup to the next phase.
+- This establishes a deterministic MVP baseline: file/language recognition, baseline highlighting, and automated Apex LSP startup handshake verification.
 
 How to verify:
 
 1. Run `cargo check` to validate Rust extension scaffold builds.
-2. Validate TOML syntax (e.g. parse `extension.toml` and `languages/apex/config.toml`).
+2. Run `./scripts/test-lsp-launch.sh` to verify Java resolution, jar checksum, and Apex LSP `initialize`/`shutdown` handshake against a fixture SFDX workspace.
 3. Install as a dev extension in Zed and open `.cls` / `.trigger` / `.apex` files.
-4. Confirm Apex mode is selected and comments/keywords/strings are highlighted.
+4. Confirm Apex mode is selected, comments/keywords/strings are highlighted, and Apex LSP starts when opening an SFDX project root.
 
 ## MVP Scope (Phase 1)
 
@@ -297,9 +303,9 @@ How to verify:
 - [x] Apex language registration (`languages/apex/config.toml`) as part of Salesforce DX language coverage.
 - [x] Tree-sitter grammar registration for Salesforce DX languages (Apex/SOQL/SOSL/SF log).
 - [x] Basic `highlights.scm` with comments/code distinction and common token classes.
-- [ ] LSP process launch path for Apex jar + Java.
-- [ ] Startup validation and meaningful failure logs.
-- [ ] Basic manual test instructions.
+- [x] LSP process launch path for Apex jar + Java.
+- [x] Startup validation and meaningful failure logs.
+- [x] Basic manual test instructions.
 
 ## Nice to have (still close to MVP)
 
@@ -332,7 +338,7 @@ How to verify:
 
 ## B) Deterministic process-level tests
 
-Create an automated script (future `scripts/test-lsp-launch.sh`) that:
+`scripts/test-lsp-launch.sh` provides deterministic process-level validation:
 
 1. Resolves Java path (setting/env simulation).
 2. Verifies jar existence, and if `vendor/apex-jorje-lsp.jar.sha256` exists, validates the checksum.
@@ -340,6 +346,12 @@ Create an automated script (future `scripts/test-lsp-launch.sh`) that:
    - start the process
    - perform a minimal LSP handshake over stdio (`initialize` -> expect a valid response -> `shutdown`/`exit`)
    - terminate/cleanup
+
+Run:
+
+```bash
+./scripts/test-lsp-launch.sh
+```
 
 This can be run by both humans and AI agents in CI/local.
 
