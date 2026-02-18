@@ -1,4 +1,5 @@
 use zed_extension_api as zed;
+use zed_extension_api::serde_json;
 
 use std::collections::HashSet;
 
@@ -7,6 +8,7 @@ const APEX_LSP_ID: &str = "apex-lsp";
 const APEX_LSP_MAIN_CLASS: &str = "apex.jorje.lsp.ApexLanguageServerLauncher";
 const APEX_LSP_JAR_REL_PATH: &str = "vendor/apex-jorje-lsp.jar";
 const SFDX_PROJECT_JSON: &str = "sfdx-project.json";
+const DEFAULT_JAVA_MAX_HEAP_MB: u64 = 2048;
 
 const APEX_LSP_PROXY_REL_PATH: &str = "vendor/apex_lsp_proxy.py";
 
@@ -284,24 +286,70 @@ fn resolve_java_command(
             extra_args.extend(args.iter().cloned());
         }
         if let Some(path) = &binary.path {
+            apply_heap_setting(lsp_settings, &mut extra_args);
             return (path.clone(), extra_args);
         }
     }
 
-    if let Some(java_home) = env_var(shell_env, "JDK_HOME").or_else(|| env_var(shell_env, "JAVA_HOME"))
+    if let Some(java_home) = java_home_from_settings(lsp_settings)
+        .or_else(|| env_var(shell_env, "JDK_HOME"))
+        .or_else(|| env_var(shell_env, "JAVA_HOME"))
     {
         let cmd = std::path::Path::new(&java_home).join("bin").join("java");
+        apply_heap_setting(lsp_settings, &mut extra_args);
         return (cmd.to_string_lossy().into_owned(), extra_args);
     }
 
     if let Some(path) = worktree.which("java") {
+        apply_heap_setting(lsp_settings, &mut extra_args);
         return (path, extra_args);
     }
 
+    apply_heap_setting(lsp_settings, &mut extra_args);
     ("java".to_string(), extra_args)
 }
 
 fn env_var(env: &zed::EnvVars, key: &str) -> Option<String> {
     env.iter()
         .find_map(|(k, v)| if k == key { Some(v.clone()) } else { None })
+}
+
+fn java_home_from_settings(lsp_settings: &zed::settings::LspSettings) -> Option<String> {
+    setting_value(lsp_settings, "java_home")
+        .and_then(|value| value.as_str())
+        .map(|value| value.trim().to_string())
+        .filter(|value| !value.is_empty())
+}
+
+fn apply_heap_setting(lsp_settings: &zed::settings::LspSettings, args: &mut Vec<String>) {
+    if has_heap_arg(args) {
+        return;
+    }
+
+    let heap = setting_value(lsp_settings, "java_max_heap_mb")
+        .and_then(value_to_u64)
+        .filter(|value| *value > 0)
+        .unwrap_or(DEFAULT_JAVA_MAX_HEAP_MB);
+
+    args.push(format!("-Xmx{heap}m"));
+}
+
+fn has_heap_arg(args: &[String]) -> bool {
+    args.iter().any(|arg| arg.starts_with("-Xmx"))
+}
+
+fn setting_value<'a>(
+    lsp_settings: &'a zed::settings::LspSettings,
+    key: &str,
+) -> Option<&'a serde_json::Value> {
+    let settings = lsp_settings.settings.as_ref()?;
+    settings.as_object()?.get(key)
+}
+
+fn value_to_u64(value: &serde_json::Value) -> Option<u64> {
+    match value {
+        serde_json::Value::Number(number) => number.as_u64(),
+        serde_json::Value::String(text) => text.trim().parse().ok(),
+        _ => None,
+    }
 }

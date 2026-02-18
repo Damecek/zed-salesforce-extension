@@ -147,7 +147,27 @@ Why Tree-sitter first:
 - Semantic tokens in Zed are optional and can be off by default.
 - We need a guaranteed baseline highlighting even before advanced LSP semantic token mapping.
 
-Then optionally enable/validate semantic tokens (`semantic_tokens = "combined"` in user settings) to augment highlighting.
+Then optionally enable/validate semantic tokens in your Zed settings to augment highlighting.
+
+### Semantic tokens compatibility notes (`off` / `combined` / `full`)
+
+- `off`: only Tree-sitter query highlighting is used. This is the most deterministic mode and the safest troubleshooting baseline.
+- `combined`: Tree-sitter baseline + semantic token overlays when available. This is usually the best mode for Apex.
+- `full`: semantic token rendering is prioritized. This can look better when server token coverage is strong, but may reduce fallback consistency if token classes are incomplete.
+
+Note: semantic token mode is an editor/user setting. The extension cannot force this value globally for users.
+
+Optional toggle in `.zed/settings.json` while evaluating Apex color behavior:
+
+```json
+{
+  "languages": {
+    "Apex": {
+      "semantic_tokens": "combined"
+    }
+  }
+}
+```
 
 ### Using upstream Tree-sitter highlight queries
 
@@ -201,12 +221,34 @@ For this project, we **ship the jar inside the extension** for deterministic, ve
 Required capability in extension logic:
 
 - Prefer explicit Zed LSP setting for this server (e.g. `lsp.apex-lsp.binary.path` pointing to a `java` executable).
+- Support explicit Java home via `lsp.apex-lsp.settings.java_home` (resolved as `<java_home>/bin/java`).
 - Fallback to `JDK_HOME`, then `JAVA_HOME`.
 - Validate:
   - directory exists
   - `bin/java` present
   - `java -version` reports supported major (>=11)
 - Provide clear error message in Zed logs/status when invalid.
+
+Heap behavior:
+
+- default is preset by the extension to `-Xmx2048m` (no user config needed)
+- optional override: `lsp.apex-lsp.settings.java_max_heap_mb`
+- advanced override: `lsp.apex-lsp.binary.arguments` with explicit `-Xmx...` (takes precedence)
+
+Example `.zed/settings.json`:
+
+```json
+{
+  "lsp": {
+    "apex-lsp": {
+      "settings": {
+        "java_home": "/Library/Java/JavaVirtualMachines/temurin-21.jdk/Contents/Home",
+        "java_max_heap_mb": 2048
+      }
+    }
+  }
+}
+```
 
 Recommended docs for users should include Java 21 guidance (consistent with Salesforce recommendations).
 
@@ -309,8 +351,8 @@ How to verify:
 
 ## Nice to have (still close to MVP)
 
-- [ ] Configurable Java home and heap size.
-- [ ] Semantic tokens compatibility notes (`off` / `combined` / `full`).
+- [x] Configurable Java home and heap size.
+- [x] Semantic tokens compatibility notes (`off` / `combined` / `full`).
 
 ## Out of MVP (next phases)
 
