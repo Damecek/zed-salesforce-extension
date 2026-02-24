@@ -32,10 +32,16 @@
 (annotation
   name: (identifier) @decorator)
 
-"@" @operator
+;; Built-in Apex annotations from Salesforce Apex Developer Guide (Annotations +
+;; Apex REST Annotations sections).
+(annotation
+  name: (identifier) @keyword
+  (#match? @keyword "^(AuraEnabled|Deprecated|Future|InvocableMethod|InvocableVariable|IsTest|isTest|JsonAccess|NamespaceAccessible|ReadOnly|RemoteAction|SuppressWarnings|TestSetup|TestVisible|RestResource|HttpDelete|HttpGet|HttpPatch|HttpPost|HttpPut)$"))
+
+"@" @decorator
 
 (annotation_key_value
-  (identifier) @variable)
+  (identifier) @property)
 
 
 ;; Types
