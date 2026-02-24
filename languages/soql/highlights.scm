@@ -1,4 +1,7 @@
-; https://code.visualstudio.com/api/language-extensions/semantic-highlight-guide#semantic-token-classification
+;------------------------------------------------------------------------------
+; Identifiers / fields / labels
+;------------------------------------------------------------------------------
+
 (field_identifier
   (identifier) @property)
 
@@ -37,7 +40,9 @@
 
 (_ function_name:(identifier) @function)
 
-(date_literal) @variable.readonly.defaultLibrary
+;------------------------------------------------------------------------------
+; Punctuation
+;------------------------------------------------------------------------------
 
 [
   ","
@@ -46,6 +51,10 @@
   "("
   ")"
 ] @punctuation
+
+;------------------------------------------------------------------------------
+; Operators
+;------------------------------------------------------------------------------
 
 [
   "AND"
@@ -58,24 +67,41 @@
   "INCLUDES"
   "EXCLUDES"
 ] @operator
+
 (value_comparison_operator "<" @operator)
 "<=" @operator
 (value_comparison_operator ">" @operator)
 ">=" @operator
+
 (set_comparison_operator "IN" @operator)
+
+;------------------------------------------------------------------------------
+; Literals
+;------------------------------------------------------------------------------
 
 (int) @number
 (decimal) @number
 (currency_literal) @number
-(string_literal) @string
-(date) @variable.readonly
-(date_time) @variable.readonly
 
+(string_literal) @string
+
+; Dates/times
+(date) @constant
+(date_time) @constant
+
+; Relative date literals (e.g., LAST_N_DAYS:7, THIS_MONTH, NEXT_FISCAL_YEAR)
+(date_literal) @constant.builtin
+
+; TRUE/FALSE/NULL are keyword constants in SOQL.
 [
   "TRUE"
   "FALSE"
   (null_literal)
-] @variable.readonly.defaultLibrary
+] @constant
+
+;------------------------------------------------------------------------------
+; Keywords
+;------------------------------------------------------------------------------
 
 [
   "ABOVE"
@@ -118,6 +144,10 @@
   "WHEN"
 ] @keyword
 
+;------------------------------------------------------------------------------
+; Enum-like keyword sets
+;------------------------------------------------------------------------------
+
 ; Using Scope
 [
   "delegated"
@@ -127,9 +157,9 @@
   "my_territory"
   "my_team_territory"
   "team"
-] @enumMember
+] @constant
 
-; With
+; WITH clause options / parameters
 [
   "maxDescriptorPerRecord"
   "RecordVisibilityContext"
@@ -139,4 +169,4 @@
   "System_Mode"
   "User_Mode"
   "UserId"
-] @enumMember
+] @constant
