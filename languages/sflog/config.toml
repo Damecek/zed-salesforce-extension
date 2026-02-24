@@ -1,4 +1,5 @@
 name = "Salesforce Log"
 grammar = "sflog"
 path_suffixes = ["sflog", "log"]
-
+tab_size = 4
+hard_tabs = false
