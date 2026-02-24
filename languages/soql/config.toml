@@ -1,4 +1,5 @@
 name = "SOQL"
 grammar = "soql"
 path_suffixes = ["soql"]
-
+tab_size = 4
+hard_tabs = false
