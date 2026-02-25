@@ -43,8 +43,6 @@
   "}"
   "["
   "]"
-  "<"
-  ">"
 ] @punctuation.bracket
 
 ;------------------------------------------------------------------------------
@@ -174,6 +172,8 @@
   (type_identifier) @type)
 
 (type_arguments
+  "<" @punctuation.bracket
+  ">" @punctuation.bracket
   (type_identifier) @type)
 
 (array_type
