@@ -295,7 +295,7 @@
   arguments: (argument_list
     (identifier) @variable))
 
-(expression_statement (_ (identifier)) @variable)
+(expression_statement (_ (identifier) @variable))
 
 (return_statement
   (identifier) @variable)
