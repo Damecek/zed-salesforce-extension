@@ -250,7 +250,7 @@
 
 ; Parameters
 (formal_parameter
-  name: (identifier) @variable)
+  name: (identifier) @variable.parameter)
 
 (method_declaration
   (formal_parameters
