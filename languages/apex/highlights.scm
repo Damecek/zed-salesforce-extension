@@ -173,8 +173,7 @@
 
 (type_arguments
   "<" @punctuation.bracket
-  ">" @punctuation.bracket
-  (type_identifier) @type)
+  ">" @punctuation.bracket)
 
 (array_type
   element: (type_identifier) @type)
