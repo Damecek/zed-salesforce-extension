@@ -1,20 +1,19 @@
 use zed_extension_api as zed;
 use zed_extension_api::serde_json;
 
-use std::collections::HashSet;
-
 const EXTENSION_ID: &str = "salesforce-dx";
 const APEX_LSP_ID: &str = "apex-lsp";
 const APEX_LSP_MAIN_CLASS: &str = "apex.jorje.lsp.ApexLanguageServerLauncher";
 const APEX_LSP_JAR_REL_PATH: &str = "vendor/apex-jorje-lsp.jar";
-const SFDX_PROJECT_JSON: &str = "sfdx-project.json";
 const DEFAULT_JAVA_MAX_HEAP_MB: u64 = 2048;
+const SFDX_DISCOVERY_MAX_DEPTH: u8 = 3;
 
 const APEX_LSP_PROXY_REL_PATH: &str = "vendor/apex_lsp_proxy.py";
 
 // Apex LSP currently depends on LSP InitializeParams.rootPath. Zed sends rootUri but may leave
 // rootPath null, which causes Apex LSP to crash when it tries to build its `.sfdx/tools/...` DB
-// path. This proxy injects `rootPath` (from `--root-path`) into the initialize request.
+// path. This proxy injects `rootPath` (from `--root-path`) into the initialize request and
+// attempts to auto-discover an SFDX project root in nested folders.
 const APEX_LSP_PROXY_PY: &str = r#"#!/usr/bin/env python3
 import argparse
 import json
@@ -22,7 +21,23 @@ import os
 import subprocess
 import sys
 import threading
+from collections import deque
 from urllib.parse import urlparse, unquote
+
+SFDX_PROJECT_JSON = "sfdx-project.json"
+MAX_SFDX_SCAN_DEPTH = __SFDX_DISCOVERY_MAX_DEPTH__
+SKIP_DIR_NAMES = {
+    ".git",
+    ".hg",
+    ".svn",
+    ".idea",
+    ".vscode",
+    ".zed",
+    "node_modules",
+    "dist",
+    "build",
+    "target",
+}
 
 
 def read_headers(stream):
@@ -70,22 +85,88 @@ def write_message(stream, body_bytes, headers=None):
 
 
 def derive_root_path(params, fallback_root_path):
+    candidates = []
+
     rp = params.get("rootPath")
     if isinstance(rp, str) and rp.strip():
-        return rp
+        candidates.append(rp)
+
     ru = params.get("rootUri")
     if isinstance(ru, str) and ru.startswith("file:"):
         u = urlparse(ru)
         if u.path:
-            return unquote(u.path)
+            candidates.append(unquote(u.path))
+
     wfs = params.get("workspaceFolders")
-    if isinstance(wfs, list) and wfs:
-        uri = wfs[0].get("uri")
-        if isinstance(uri, str) and uri.startswith("file:"):
-            u = urlparse(uri)
-            if u.path:
-                return unquote(u.path)
+    if isinstance(wfs, list):
+        for wf in wfs:
+            if not isinstance(wf, dict):
+                continue
+            uri = wf.get("uri")
+            if isinstance(uri, str) and uri.startswith("file:"):
+                u = urlparse(uri)
+                if u.path:
+                    candidates.append(unquote(u.path))
+
+    if isinstance(fallback_root_path, str) and fallback_root_path.strip():
+        candidates.append(fallback_root_path)
+
+    seen = set()
+    for candidate in candidates:
+        normalized = os.path.abspath(candidate)
+        if normalized in seen:
+            continue
+        seen.add(normalized)
+        found = find_sfdx_project_root(normalized)
+        if found:
+            return found
+
+    if candidates:
+        fallback = os.path.abspath(candidates[0])
+        if os.path.isfile(fallback):
+            return os.path.dirname(fallback)
+        return fallback
     return fallback_root_path
+
+
+def find_sfdx_project_root(start_path):
+    if not start_path:
+        return None
+
+    start_path = os.path.abspath(start_path)
+    if os.path.isfile(start_path):
+        start_path = os.path.dirname(start_path)
+    if not os.path.isdir(start_path):
+        return None
+
+    queue = deque([(start_path, 0)])
+    seen = set()
+    while queue:
+        current, depth = queue.popleft()
+        if current in seen:
+            continue
+        seen.add(current)
+
+        marker = os.path.join(current, SFDX_PROJECT_JSON)
+        if os.path.isfile(marker):
+            return current
+
+        if depth >= MAX_SFDX_SCAN_DEPTH:
+            continue
+
+        try:
+            entries = list(os.scandir(current))
+        except OSError:
+            continue
+
+        for entry in entries:
+            if not entry.is_dir(follow_symlinks=False):
+                continue
+            if entry.name in SKIP_DIR_NAMES:
+                continue
+            queue.append((entry.path, depth + 1))
+
+    return None
 
 
 def pump_stdin_to_java(java_proc, root_path):
@@ -151,15 +232,11 @@ if __name__ == "__main__":
     sys.exit(main())
 "#;
 
-struct SalesforceExtension {
-    warned_missing_sfdx: HashSet<u64>,
-}
+struct SalesforceExtension;
 
 impl zed::Extension for SalesforceExtension {
     fn new() -> Self {
-        Self {
-            warned_missing_sfdx: HashSet::new(),
-        }
+        Self
     }
 
     fn language_server_command(
@@ -169,21 +246,6 @@ impl zed::Extension for SalesforceExtension {
     ) -> zed::Result<zed::Command> {
         if language_server_id.as_ref() != APEX_LSP_ID {
             return Err(format!("Unknown language server id: {language_server_id}"));
-        }
-
-        // MVP guardrail: Apex LSP expects an SFDX workspace root.
-        // If missing, we intentionally skip starting the server.
-        if worktree.read_text_file(SFDX_PROJECT_JSON).is_err() {
-            let id = worktree.id();
-            if self.warned_missing_sfdx.insert(id) {
-                eprintln!(
-                    "[salesforce] Apex LSP not started: `{SFDX_PROJECT_JSON}` not found at worktree root ({}). Open the Salesforce DX project root folder to enable LSP.",
-                    worktree.root_path()
-                );
-            }
-            return Err(format!(
-                "Apex LSP skipped (missing `{SFDX_PROJECT_JSON}` at worktree root)."
-            ));
         }
 
         let jar_path = resolve_apex_lsp_jar_path()?;
@@ -198,7 +260,7 @@ impl zed::Extension for SalesforceExtension {
         jvm_args.push(APEX_LSP_MAIN_CLASS.to_string());
 
         // Apex LSP relies on InitializeParams.rootPath; Zed may only send rootUri. We run a tiny
-        // stdio proxy that injects rootPath based on the worktree root.
+        // stdio proxy that injects rootPath and can resolve nested SFDX roots.
         let (proxy_cmd, proxy_args) = ensure_and_build_proxy_command(worktree, &shell_env, &java_command, &jvm_args)?;
 
         Ok(zed::Command {
@@ -251,7 +313,11 @@ fn ensure_and_build_proxy_command(
     .map_err(|err| err.to_string())?;
 
     // Write/overwrite; it's tiny and avoids version skew.
-    std::fs::write(&proxy_path, APEX_LSP_PROXY_PY.as_bytes()).map_err(|err| err.to_string())?;
+    let proxy_contents = APEX_LSP_PROXY_PY.replace(
+        "__SFDX_DISCOVERY_MAX_DEPTH__",
+        &SFDX_DISCOVERY_MAX_DEPTH.to_string(),
+    );
+    std::fs::write(&proxy_path, proxy_contents.as_bytes()).map_err(|err| err.to_string())?;
 
     // Make it executable for easier debugging, but we still invoke via python.
     let _ = zed::make_file_executable(APEX_LSP_PROXY_REL_PATH);

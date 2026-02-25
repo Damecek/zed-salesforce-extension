@@ -262,7 +262,7 @@ Zed starts language servers per *worktree* (a directory project or a single-file
 
 - Best supported: open the **project directory** as a Zed worktree (not just a standalone `.cls` file).
 - If you open a **single file** outside a directory worktree, there is typically no `sfdx-project.json` at the worktree root.
-  For the MVP, that means **syntax highlighting will work, but Apex LSP will not be started** (see Root discovery below).
+  For MVP, syntax highlighting still works; Apex LSP startup now tries to discover an SFDX project in nested folders before falling back to the worktree root.
 
 Zed also has a Restricted/Trusted worktree model:
 
@@ -272,6 +272,7 @@ Zed also has a Restricted/Trusted worktree model:
 ### Supported workspace profile (MVP)
 
 - Primary target: an **SFDX project root** opened as the worktree root, containing `sfdx-project.json` at the top level.
+- Also supported: monorepo-style roots where the SFDX project is nested in a subdirectory. Startup attempts to locate the nearest nested folder that contains `sfdx-project.json`.
 - Apex and related Salesforce DX source files are located according to Salesforce DX conventions, e.g. within one of the `packageDirectories` roots (commonly `force-app/main/default/...`).
 
 Concrete examples of layouts we expect to work best:
@@ -283,7 +284,7 @@ Concrete examples of layouts we expect to work best:
 Concrete examples that are *not* a primary MVP target (may partially work, but not guaranteed):
 
 - “MDAPI-style” folders like `src/classes` without `sfdx-project.json`
-- Standalone `.apex` scripts outside an SFDX project (highlighting should work; **LSP will not be started in MVP**)
+- Standalone `.apex` scripts outside an SFDX project (highlighting should work; LSP start behavior depends on Apex server tolerance when no SFDX layout is present)
 
 If unsupported workspace is opened, extension should degrade gracefully:
 
@@ -293,13 +294,14 @@ If unsupported workspace is opened, extension should degrade gracefully:
 ### Explicit limitations (MVP)
 
 - Multi-root setups: Zed can have multiple worktrees open. The MVP assumes language servers are started independently per worktree and does not attempt cross-worktree indexing.
-- Root discovery: the MVP requires `sfdx-project.json` to exist at the *worktree root*. If it is missing, the extension should not start the language server and should emit a clear error suggesting to open the SFDX project root folder.
+- Root discovery: startup prefers `sfdx-project.json` at worktree root, but if missing it scans nested folders and uses the first matching SFDX project root for `rootPath`.
+- Missing SFDX marker: the extension should not throw a fatal startup error solely because `sfdx-project.json` is absent at worktree root.
 - Org-dependent features (auth files, namespace from org, etc.) are out of scope. The VS Code implementation uses the Salesforce Core extension to derive org namespace and other context; we will not replicate that during MVP.
 - Restricted worktrees: the MVP should not start any external process (including Java) until the worktree is trusted, aligning with Zed’s supply-chain safety posture.
 
 ### `sfdx-project.json` parsing (MVP)
 
-For deterministic behavior, the extension should parse `sfdx-project.json` from the worktree root and use only a minimal set of keys:
+For deterministic behavior, the extension should parse `sfdx-project.json` from the resolved project root (worktree root or discovered nested SFDX root) and use only a minimal set of keys:
 
 - `packageDirectories`: determine which folder roots constitute Salesforce DX source packages. This is used for:
   - validation and error messages (e.g. warn when a `.cls` is outside any package directory)
