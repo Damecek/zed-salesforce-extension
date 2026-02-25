@@ -1,6 +1,6 @@
 # zed-salesforce-extension
 
-Salesforce DX language support for the Zed editor. The current implementation uses Salesforce's Apex Language Server (`apex-jorje-lsp.jar`) for Apex while the extension scope covers additional Salesforce languages (SOQL/SOSL/logs today, LWC/Aura/Visualforce next).
+Salesforce DX language support for the Zed editor. Apex LSP is configurable: default backend is Salesforce's Java server (`apex-jorje-lsp.jar`), with optional Node-based backend support via [`apex-language-support`](https://github.com/forcedotcom/apex-language-support). The extension scope also covers additional Salesforce languages (SOQL/SOSL/logs today, LWC/Aura/Visualforce next).
 
 ## Project Goal
 
@@ -43,7 +43,7 @@ From `languageServer.ts`, Salesforce VS Code extension starts the language serve
 - Main class: `apex.jorje.lsp.ApexLanguageServerLauncher`.
 - Additional JVM flags for diagnostics/telemetry/debug features.
 
-That means this project should treat **`apex-jorje-lsp.jar` as the authoritative LSP server binary payload**, launched as a Java process.
+For MVP reliability, `apex-jorje-lsp.jar` remains the default backend. The extension now also supports switching to `apex-language-support` via settings.
 
 From `requirements.ts` + Salesforce Java setup docs:
 
@@ -200,14 +200,17 @@ In `extension.toml`:
 In Rust extension code (`src/lib.rs`):
 
 - Implement `language_server_command(...) -> zed::Command`.
-- Launch Java process similarly to Salesforce:
+- Support backend selection via `lsp.apex-lsp.settings.backend`:
+  - `apex_jorje_java` (default)
+  - `apex_language_support`
+- For `apex_jorje_java`, launch Java process similarly to Salesforce:
   - `command`: resolved Java executable path
   - `args`: `-cp <path-to-jar> apex.jorje.lsp.ApexLanguageServerLauncher`
   - plus safe JVM args (`-Xmx` optional for memory control)
+- For `apex_language_support`, launch Node with configured JS entrypoint and `--stdio`.
 - Set environment variables if needed.
-- Note: the current Apex LSP backend relies on the deprecated LSP `rootPath` field. Zed may only send `rootUri`,
-  so this extension runs a tiny stdio proxy that injects `rootPath` based on the worktree root to
-  prevent Apex LSP from crashing when initializing its `.sfdx/tools/...` DB.
+- Note: the current Java backend relies on the deprecated LSP `rootPath` field. Zed may only send `rootUri`,
+  so this extension runs a tiny stdio proxy for that backend to inject `rootPath` based on the worktree root.
 
 ## 5) Current Apex jar sourcing (decision)
 
@@ -215,6 +218,11 @@ For this project, we **ship the jar inside the extension** for deterministic, ve
 
 - Vendored jar in this repo: `vendor/apex-jorje-lsp.jar` (+ SHA in `vendor/apex-jorje-lsp.jar.sha256`)
 - Runtime jar path used by the extension: `extensions/installed/salesforce/vendor/apex-jorje-lsp.jar`
+
+For the Node backend, this extension also vendors a built Apex language server entrypoint:
+
+- Vendored Node entrypoint: `vendor/apex-language-support/index.js` (+ SHA in `vendor/apex-language-support/index.js.sha256`)
+- Runtime Node entry path used by default: `extensions/installed/salesforce/vendor/apex-language-support/index.js`
 
 ## 6) Java runtime acquisition strategy
 
@@ -251,6 +259,40 @@ Example `.zed/settings.json`:
 ```
 
 Recommended docs for users should include Java 21 guidance (consistent with Salesforce recommendations).
+
+## 6.1) Alternative Apex backend: `apex-language-support`
+
+When you want to use [`forcedotcom/apex-language-support`](https://github.com/forcedotcom/apex-language-support), configure the backend explicitly:
+
+- `lsp.apex-lsp.settings.backend = "apex_language_support"`
+- `lsp.apex-lsp.settings.apex_language_support_entry` (optional): absolute path override for server entry JS file.  
+  Default is vendored `vendor/apex-language-support/index.js`.
+- `lsp.apex-lsp.settings.apex_language_support_node_path` (optional): absolute path to `node` binary (highest priority).
+- `lsp.apex-lsp.settings.apex_language_support_node_home` (optional): resolved as `<node_home>/bin/node`.
+- `lsp.apex-lsp.settings.apex_language_support_args` (optional): additional arguments appended to launch args.
+- `lsp.apex-lsp.settings.apex_language_support_log_level` (optional): injected into LSP `initialize.initializationOptions.logLevel`.  
+  Default is `info` for better runtime visibility.
+- `lsp.apex-lsp.settings.apex_language_support_extension_mode` (optional): injected into `initialize.initializationOptions.extensionMode` (`production` or `development`).
+
+The extension automatically adds `--stdio` unless already present in `apex_language_support_args`.
+Node resolution order is: `apex_language_support_node_path` -> `apex_language_support_node_home` -> `NODE_HOME` -> `node` from PATH.
+
+Example `.zed/settings.json`:
+
+```json
+{
+  "lsp": {
+    "apex-lsp": {
+      "settings": {
+        "backend": "apex_language_support",
+        "apex_language_support_node_home": "/opt/homebrew/opt/node",
+        "apex_language_support_log_level": "info",
+        "apex_language_support_args": []
+      }
+    }
+  }
+}
+```
 
 ## 7) Workspace assumptions and limitations
 
@@ -435,8 +477,9 @@ Even if full GUI assertion is hard, log-based validation is practical for agents
 
 ## Architecture Decisions (Current)
 
-- Current LSP engine (Apex): Salesforce `apex-jorje-lsp.jar`.
-- Runtime: Java (11+ required, Java 21 recommended).
+- Current default LSP engine (Apex): Salesforce `apex-jorje-lsp.jar`.
+- Optional alternative LSP engine (Apex): `apex-language-support` (Node-based, configured by settings).
+- Runtime: Java (11+ required, Java 21 recommended) for default backend, Node.js for alternative backend.
 - Editor integration: Zed extension with Rust `language_server_command` launcher.
 - Highlighting baseline: Tree-sitter (`highlights.scm`), semantic tokens optional enhancement.
 - MVP goal: reliable startup + baseline coding ergonomics across Salesforce DX languages before advanced features.
