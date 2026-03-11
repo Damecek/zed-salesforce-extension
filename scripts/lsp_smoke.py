@@ -155,6 +155,9 @@ def main():
 
     java_cmd = [
         args.java,
+        "-Ddebug.internal.errors=true",
+        "-Ddebug.completion.statistics=false",
+        "-Dlwc.typegeneration.disabled=true",
         "-cp",
         str(Path(args.jar).resolve()),
         "apex.jorje.lsp.ApexLanguageServerLauncher",

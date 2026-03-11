@@ -234,6 +234,13 @@ Heap behavior:
 - optional override: `lsp.apex-lsp.settings.java_max_heap_mb`
 - advanced override: `lsp.apex-lsp.binary.arguments` with explicit `-Xmx...` (takes precedence)
 
+Default Apex LSP JVM properties:
+
+- `-Ddebug.internal.errors=true`
+- `-Ddebug.completion.statistics=false`
+- `-Dlwc.typegeneration.disabled=true`
+- advanced override: `lsp.apex-lsp.binary.arguments` with explicit `-D...` for the same property name (takes precedence)
+
 Example `.zed/settings.json`:
 
 ```json

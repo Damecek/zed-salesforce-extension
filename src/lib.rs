@@ -5,6 +5,11 @@ const EXTENSION_ID: &str = "salesforce-dx";
 const APEX_LSP_ID: &str = "apex-lsp";
 const APEX_LSP_MAIN_CLASS: &str = "apex.jorje.lsp.ApexLanguageServerLauncher";
 const APEX_LSP_JAR_REL_PATH: &str = "vendor/apex-jorje-lsp.jar";
+const APEX_LSP_DEFAULT_JVM_PROPERTIES: [(&str, &str); 3] = [
+    ("debug.internal.errors", "true"),
+    ("debug.completion.statistics", "false"),
+    ("lwc.typegeneration.disabled", "true"),
+];
 const DEFAULT_JAVA_MAX_HEAP_MB: u64 = 2048;
 
 struct SalesforceExtension;
@@ -26,10 +31,11 @@ impl zed::Extension for SalesforceExtension {
         let jar_path = resolve_apex_lsp_jar_path()?;
 
         let shell_env = worktree.shell_env();
-        let lsp_settings = zed::settings::LspSettings::for_worktree(APEX_LSP_ID, worktree)
-            .unwrap_or_default();
+        let lsp_settings =
+            zed::settings::LspSettings::for_worktree(APEX_LSP_ID, worktree).unwrap_or_default();
 
-        let (java_command, mut jvm_args) = resolve_java_command(&lsp_settings, &shell_env, worktree);
+        let (java_command, mut jvm_args) =
+            resolve_java_command(&lsp_settings, &shell_env, worktree);
         jvm_args.push("-cp".to_string());
         jvm_args.push(jar_path);
         jvm_args.push(APEX_LSP_MAIN_CLASS.to_string());
@@ -59,7 +65,12 @@ fn resolve_apex_lsp_jar_path() -> zed::Result<String> {
         .parent()
         .and_then(|p| p.parent())
         .map(|extensions_dir| extensions_dir.join("installed").join(EXTENSION_ID))
-        .ok_or_else(|| format!("Could not derive extension installed directory from {}", work_dir.display()))?;
+        .ok_or_else(|| {
+            format!(
+                "Could not derive extension installed directory from {}",
+                work_dir.display()
+            )
+        })?;
 
     Ok(installed_dir
         .join(APEX_LSP_JAR_REL_PATH)
@@ -77,11 +88,14 @@ fn resolve_java_command(
         if let Some(args) = &binary.arguments {
             extra_args.extend(args.iter().cloned());
         }
+        apply_default_apex_lsp_jvm_args(&mut extra_args);
         if let Some(path) = &binary.path {
             apply_heap_setting(lsp_settings, &mut extra_args);
             return (path.clone(), extra_args);
         }
     }
+
+    apply_default_apex_lsp_jvm_args(&mut extra_args);
 
     if let Some(java_home) = java_home_from_settings(lsp_settings)
         .or_else(|| env_var(shell_env, "JDK_HOME"))
@@ -126,8 +140,23 @@ fn apply_heap_setting(lsp_settings: &zed::settings::LspSettings, args: &mut Vec<
     args.push(format!("-Xmx{heap}m"));
 }
 
+fn apply_default_apex_lsp_jvm_args(args: &mut Vec<String>) {
+    for (name, value) in APEX_LSP_DEFAULT_JVM_PROPERTIES {
+        if has_system_property_arg(args, name) {
+            continue;
+        }
+        args.push(format!("-D{name}={value}"));
+    }
+}
+
 fn has_heap_arg(args: &[String]) -> bool {
     args.iter().any(|arg| arg.starts_with("-Xmx"))
+}
+
+fn has_system_property_arg(args: &[String], key: &str) -> bool {
+    let prefix = format!("-D{key}");
+    args.iter()
+        .any(|arg| arg == &prefix || arg.starts_with(&format!("{prefix}=")))
 }
 
 fn setting_value<'a>(
