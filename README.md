@@ -205,9 +205,8 @@ In Rust extension code (`src/lib.rs`):
   - `args`: `-cp <path-to-jar> apex.jorje.lsp.ApexLanguageServerLauncher`
   - plus safe JVM args (`-Xmx` optional for memory control)
 - Set environment variables if needed.
-- Note: the current Apex LSP backend relies on the deprecated LSP `rootPath` field. Zed may only send `rootUri`,
-  so this extension runs a tiny stdio proxy that injects `rootPath` based on the worktree root to
-  prevent Apex LSP from crashing when initializing its `.sfdx/tools/...` DB.
+- Apex LSP is launched directly via Java; the extension does not require Python or rewrite LSP
+  initialize traffic.
 
 ## 5) Current Apex jar sourcing (decision)
 
@@ -262,7 +261,7 @@ Zed starts language servers per *worktree* (a directory project or a single-file
 
 - Best supported: open the **project directory** as a Zed worktree (not just a standalone `.cls` file).
 - If you open a **single file** outside a directory worktree, there is typically no `sfdx-project.json` at the worktree root.
-  For MVP, syntax highlighting still works; Apex LSP startup now tries to discover an SFDX project in nested folders before falling back to the worktree root.
+  For MVP, syntax highlighting still works; Apex LSP behavior depends on the workspace root supplied by Zed.
 
 Zed also has a Restricted/Trusted worktree model:
 
@@ -272,7 +271,7 @@ Zed also has a Restricted/Trusted worktree model:
 ### Supported workspace profile (MVP)
 
 - Primary target: an **SFDX project root** opened as the worktree root, containing `sfdx-project.json` at the top level.
-- Also supported: monorepo-style roots where the SFDX project is nested in a subdirectory. Startup attempts to locate the nearest nested folder that contains `sfdx-project.json`.
+- Also observed to work: a monorepo-style worktree where an SFDX project is nested in a subdirectory. This is based on the current vendored Apex LSP behavior with the workspace root supplied by Zed; the extension does not implement explicit nested-root discovery or rewrite `rootPath`.
 - Apex and related Salesforce DX source files are located according to Salesforce DX conventions, e.g. within one of the `packageDirectories` roots (commonly `force-app/main/default/...`).
 
 Concrete examples of layouts we expect to work best:
@@ -294,14 +293,16 @@ If unsupported workspace is opened, extension should degrade gracefully:
 ### Explicit limitations (MVP)
 
 - Multi-root setups: Zed can have multiple worktrees open. The MVP assumes language servers are started independently per worktree and does not attempt cross-worktree indexing.
-- Root discovery: startup prefers `sfdx-project.json` at worktree root, but if missing it scans nested folders and uses the first matching SFDX project root for `rootPath`.
 - Missing SFDX marker: the extension should not throw a fatal startup error solely because `sfdx-project.json` is absent at worktree root.
+- No explicit nested-root rewrite: the extension does not scan for nested `sfdx-project.json` files and does not override the workspace root that Zed passes to the language server.
 - Org-dependent features (auth files, namespace from org, etc.) are out of scope. The VS Code implementation uses the Salesforce Core extension to derive org namespace and other context; we will not replicate that during MVP.
 - Restricted worktrees: the MVP should not start any external process (including Java) until the worktree is trusted, aligning with Zed’s supply-chain safety posture.
 
-### `sfdx-project.json` parsing (MVP)
+### `sfdx-project.json` parsing (future work)
 
-For deterministic behavior, the extension should parse `sfdx-project.json` from the resolved project root (worktree root or discovered nested SFDX root) and use only a minimal set of keys:
+The current MVP does not parse `sfdx-project.json` in extension runtime code yet.
+
+When this is implemented, the intended minimal surface is:
 
 - `packageDirectories`: determine which folder roots constitute Salesforce DX source packages. This is used for:
   - validation and error messages (e.g. warn when a `.cls` is outside any package directory)
@@ -309,7 +310,7 @@ For deterministic behavior, the extension should parse `sfdx-project.json` from 
 - `namespace`: used only for user-facing messaging and (future) LSP UX parity behaviors; we do not assume org namespace access in MVP.
 - `sourceApiVersion`: used for compatibility decisions that depend on API version (future). For MVP it is optional and can be logged for diagnostics.
 
-If parsing fails (invalid JSON), the extension should not start LSP and should log an actionable parse error.
+If this parsing is added later and parsing fails (invalid JSON), the extension should not start LSP and should log an actionable parse error.
 
 
 ## MVP Progress Update
@@ -322,7 +323,7 @@ What changed:
 - Added baseline syntax highlighting query in `languages/apex/highlights.scm` sourced from upstream pinned grammar revision.
 - Registered SOQL/SOSL/Salesforce Log grammars and added language configs + highlights for `.soql`, `.sosl`, and `.sflog` (and `.log`) as part of broader Salesforce DX language support.
 - Implemented Apex LSP launch command wiring in `src/lib.rs` (Java resolution + vendored jar launch).
-- Added a rootPath-injecting stdio proxy for Apex LSP initialize compatibility.
+- Removed the temporary Python stdio proxy; Apex LSP is now launched directly through Java.
 - Added deterministic smoke test automation:
   - `scripts/test-lsp-launch.sh`
   - `scripts/lsp_smoke.py`
@@ -331,13 +332,14 @@ What changed:
 Why:
 
 - This establishes a deterministic MVP baseline: file/language recognition, baseline highlighting, and automated Apex LSP startup handshake verification.
+- This removes an obsolete runtime dependency on Python while keeping automated startup and completion verification.
 
 How to verify:
 
 1. Run `cargo check` to validate Rust extension scaffold builds.
-2. Run `./scripts/test-lsp-launch.sh` to verify Java resolution, jar checksum, and Apex LSP `initialize`/`shutdown` handshake against a fixture SFDX workspace.
+2. Run `./scripts/test-lsp-launch.sh` to verify Java resolution, jar checksum, and Apex LSP completion against both a fixture SFDX workspace root and a nested SFDX workspace inside a monorepo-style root.
 3. Install as a dev extension in Zed and open `.cls` / `.trigger` / `.apex` files.
-4. Confirm Apex mode is selected, comments/keywords/strings are highlighted, and Apex LSP starts when opening an SFDX project root.
+4. Confirm Apex mode is selected, comments/keywords/strings are highlighted, and Apex LSP starts when opening an SFDX project root. Optionally also verify the currently tested nested monorepo scenario.
 
 ## MVP Scope (Phase 1)
 
@@ -386,9 +388,11 @@ How to verify:
 
 1. Resolves Java path (setting/env simulation).
 2. Verifies jar existence, and if `vendor/apex-jorje-lsp.jar.sha256` exists, validates the checksum.
-3. Runs a short-lived Apex LSP launch smoke test (current backend):
+3. Runs short-lived Apex LSP launch smoke tests (current backend):
    - start the process
-   - perform a minimal LSP handshake over stdio (`initialize` -> expect a valid response -> `shutdown`/`exit`)
+   - perform a minimal LSP handshake over stdio
+   - open a fixture trigger file and request completion at `System.`
+   - assert completion returns one or more items
    - terminate/cleanup
 
 Run:
@@ -420,7 +424,7 @@ Even if full GUI assertion is hard, log-based validation is practical for agents
 - Open Apex file: syntax colors clearly distinguish comments, keywords, strings.
 - Open `.soql` / `.sosl` / `.sflog` files: basic highlighting works.
 - LSP starts without configuration surprises on Java 21.
-- At least one of: diagnostics / completion / go-to-definition works.
+- Completion works in a direct SFDX project root. The current smoke test also covers one monorepo-style parent worktree scenario with a nested SFDX project.
 - Failure mode with invalid Java path yields clear instruction.
 
 ## Relevant External Implementations to Study Further

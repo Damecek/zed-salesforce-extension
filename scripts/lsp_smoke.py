@@ -63,17 +63,95 @@ def wait_for_response(stream, response_id, timeout_seconds, max_messages=200):
     return None
 
 
+def open_text_document(proc, document_path, timeout_seconds):
+    text = document_path.read_text(encoding="utf-8")
+    write_message(
+        proc.stdin,
+        {
+            "jsonrpc": "2.0",
+            "method": "textDocument/didOpen",
+            "params": {
+                "textDocument": {
+                    "uri": file_uri(document_path),
+                    "languageId": "apex",
+                    "version": 1,
+                    "text": text,
+                }
+            },
+        },
+    )
+    return text
+
+
+def completion_position(text, prefix):
+    for line_index, line in enumerate(text.splitlines()):
+        column = line.find(prefix)
+        if column >= 0:
+            return {"line": line_index, "character": column + len(prefix)}
+    raise RuntimeError(f"Completion prefix not found in probe file: {prefix!r}")
+
+
+def completion_items(result):
+    if isinstance(result, list):
+        return result
+    if isinstance(result, dict):
+        items = result.get("items")
+        if isinstance(items, list):
+            return items
+    return []
+
+
+def run_completion_probe(proc, workspace, probe_file, completion_prefix, timeout_seconds):
+    document_path = (workspace / probe_file).resolve()
+    if not document_path.is_file():
+        raise RuntimeError(f"Probe file does not exist: {document_path}")
+
+    write_message(proc.stdin, {"jsonrpc": "2.0", "method": "initialized", "params": {}})
+    text = open_text_document(proc, document_path, timeout_seconds)
+    position = completion_position(text, completion_prefix)
+    write_message(
+        proc.stdin,
+        {
+            "jsonrpc": "2.0",
+            "id": 3,
+            "method": "textDocument/completion",
+            "params": {
+                "textDocument": {"uri": file_uri(document_path)},
+                "position": position,
+                "context": {"triggerKind": 1},
+            },
+        },
+    )
+    response = wait_for_response(proc.stdout, 3, timeout_seconds)
+    if response is None:
+        raise RuntimeError("No completion response from LSP process.")
+    if response.get("id") != 3 or "result" not in response:
+        raise RuntimeError(f"Unexpected completion response: {response}")
+
+    items = completion_items(response["result"])
+    if not items:
+        raise RuntimeError(
+            f"Completion probe returned no items for {document_path} at prefix {completion_prefix!r}."
+        )
+
+    return len(items)
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--java", required=True)
     parser.add_argument("--jar", required=True)
     parser.add_argument("--workspace", required=True)
+    parser.add_argument("--probe-file")
+    parser.add_argument("--completion-prefix")
     parser.add_argument("--timeout-seconds", type=int, default=20)
     args = parser.parse_args()
 
     workspace = Path(args.workspace).resolve()
     if not workspace.exists():
         raise SystemExit(f"Workspace does not exist: {workspace}")
+    if bool(args.probe_file) != bool(args.completion_prefix):
+        raise SystemExit("--probe-file and --completion-prefix must be provided together")
 
     java_cmd = [
         args.java,
@@ -119,12 +197,22 @@ def main():
         if response.get("id") != 1 or "result" not in response:
             raise RuntimeError(f"Unexpected initialize response: {response}")
 
+        completion_count = None
+        if args.probe_file:
+            completion_count = run_completion_probe(
+                proc,
+                workspace,
+                args.probe_file,
+                args.completion_prefix,
+                args.timeout_seconds,
+            )
+
         write_message(
             proc.stdin,
             {"jsonrpc": "2.0", "id": 2, "method": "shutdown", "params": None},
         )
         shutdown_response = wait_for_response(proc.stdout, 2, args.timeout_seconds)
-        if shutdown_response is None or shutdown_response.get("id") != 2:
+        if not args.probe_file and (shutdown_response is None or shutdown_response.get("id") != 2):
             raise RuntimeError(f"Unexpected shutdown response: {shutdown_response}")
 
         write_message(proc.stdin, {"jsonrpc": "2.0", "method": "exit", "params": None})
@@ -135,7 +223,12 @@ def main():
         proc.wait(timeout=5)
         raise SystemExit(str(exc))
 
-    print("Apex LSP smoke test passed: initialize/shutdown handshake succeeded.")
+    if args.probe_file:
+        print(
+            f"Apex LSP smoke test passed: completion probe returned {completion_count} items for {args.probe_file}."
+        )
+    else:
+        print("Apex LSP smoke test passed: initialize/shutdown handshake succeeded.")
 
 
 if __name__ == "__main__":

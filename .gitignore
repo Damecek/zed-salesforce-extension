@@ -28,3 +28,6 @@ salesforcedx-vscode/
 /scripts/__pycache__/
 /scripts/fixtures/sfdx-minimal/.sfdx/
 *.wasm
+
+# salesforcedx
+.sfdx

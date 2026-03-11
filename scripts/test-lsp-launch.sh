@@ -7,6 +7,8 @@ REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 JAR_PATH="${REPO_ROOT}/vendor/apex-jorje-lsp.jar"
 JAR_SHA_PATH="${REPO_ROOT}/vendor/apex-jorje-lsp.jar.sha256"
 WORKSPACE_PATH="${REPO_ROOT}/scripts/fixtures/sfdx-minimal"
+PROBE_FILE="force-app/main/default/triggers/SmokeTest.trigger"
+COMPLETION_PREFIX="System."
 SMOKE_PY="${REPO_ROOT}/scripts/lsp_smoke.py"
 
 resolve_java() {
@@ -49,7 +51,7 @@ verify_sha256() {
 }
 
 main() {
-  local java_cmd major
+  local java_cmd major nested_root nested_workspace
   java_cmd="$(resolve_java)"
   if [[ ! -x "${java_cmd}" ]]; then
     echo "Java binary is not executable: ${java_cmd}" >&2
@@ -78,6 +80,24 @@ main() {
     --java "${java_cmd}" \
     --jar "${JAR_PATH}" \
     --workspace "${WORKSPACE_PATH}" \
+    --probe-file "${PROBE_FILE}" \
+    --completion-prefix "${COMPLETION_PREFIX}" \
+    --timeout-seconds 20
+
+  nested_root="$(mktemp -d)"
+  trap 'rm -rf "${nested_root:-}"' EXIT
+  nested_workspace="${nested_root}/packages/sfdx-minimal"
+  mkdir -p "${nested_root}/packages"
+  cp -R "${WORKSPACE_PATH}" "${nested_workspace}"
+
+  echo "Running Apex LSP smoke test against nested SFDX workspace..."
+
+  python3 "${SMOKE_PY}" \
+    --java "${java_cmd}" \
+    --jar "${JAR_PATH}" \
+    --workspace "${nested_root}" \
+    --probe-file "packages/sfdx-minimal/${PROBE_FILE}" \
+    --completion-prefix "${COMPLETION_PREFIX}" \
     --timeout-seconds 20
 }
 
