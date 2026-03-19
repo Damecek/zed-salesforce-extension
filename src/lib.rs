@@ -11,6 +11,14 @@ const APEX_LSP_DEFAULT_JVM_PROPERTIES: [(&str, &str); 3] = [
     ("lwc.typegeneration.disabled", "true"),
 ];
 const DEFAULT_JAVA_MAX_HEAP_MB: u64 = 2048;
+const AER_BINARY_NAME: &str = "aer";
+const AER_BACKEND_SETTING_KEY: &str = "backend";
+
+#[derive(Debug, PartialEq)]
+enum ApexLspBackend {
+    Jorje,
+    Aer,
+}
 
 struct SalesforceExtension;
 
@@ -28,23 +36,26 @@ impl zed::Extension for SalesforceExtension {
             return Err(format!("Unknown language server id: {language_server_id}"));
         }
 
-        let jar_path = resolve_apex_lsp_jar_path()?;
-
         let shell_env = worktree.shell_env();
         let lsp_settings =
             zed::settings::LspSettings::for_worktree(APEX_LSP_ID, worktree).unwrap_or_default();
 
-        let (java_command, mut jvm_args) =
-            resolve_java_command(&lsp_settings, &shell_env, worktree);
-        jvm_args.push("-cp".to_string());
-        jvm_args.push(jar_path);
-        jvm_args.push(APEX_LSP_MAIN_CLASS.to_string());
-
-        Ok(zed::Command {
-            command: java_command,
-            args: jvm_args,
-            env: shell_env,
-        })
+        match resolve_backend(&lsp_settings) {
+            ApexLspBackend::Aer => build_aer_command(&lsp_settings, shell_env, worktree),
+            ApexLspBackend::Jorje => {
+                let jar_path = resolve_apex_lsp_jar_path()?;
+                let (java_command, mut jvm_args) =
+                    resolve_java_command(&lsp_settings, &shell_env, worktree);
+                jvm_args.push("-cp".to_string());
+                jvm_args.push(jar_path);
+                jvm_args.push(APEX_LSP_MAIN_CLASS.to_string());
+                Ok(zed::Command {
+                    command: java_command,
+                    args: jvm_args,
+                    env: shell_env,
+                })
+            }
+        }
     }
 }
 
@@ -76,6 +87,126 @@ fn resolve_apex_lsp_jar_path() -> zed::Result<String> {
         .join(APEX_LSP_JAR_REL_PATH)
         .to_string_lossy()
         .into_owned())
+}
+
+fn resolve_backend(lsp_settings: &zed::settings::LspSettings) -> ApexLspBackend {
+    match setting_value(lsp_settings, AER_BACKEND_SETTING_KEY)
+        .and_then(|v| v.as_str())
+        .map(|s| s.trim().to_ascii_lowercase())
+        .as_deref()
+    {
+        Some("aer") => ApexLspBackend::Aer,
+        _ => ApexLspBackend::Jorje,
+    }
+}
+
+fn build_aer_command(
+    lsp_settings: &zed::settings::LspSettings,
+    shell_env: zed::EnvVars,
+    worktree: &zed::Worktree,
+) -> zed::Result<zed::Command> {
+    let aer_path = resolve_aer_binary(lsp_settings, &shell_env, worktree)?;
+    let source_args = resolve_aer_source_args(lsp_settings, worktree);
+    let mut args = vec!["lsp".to_string()];
+    args.extend(source_args);
+    Ok(zed::Command {
+        command: aer_path,
+        args,
+        env: shell_env,
+    })
+}
+
+fn resolve_aer_source_args(
+    lsp_settings: &zed::settings::LspSettings,
+    worktree: &zed::Worktree,
+) -> Vec<String> {
+    // Priority 1: explicit user override via settings.aer_source_paths (JSON array)
+    if let Some(paths) = setting_value(lsp_settings, "aer_source_paths").and_then(|v| v.as_array())
+    {
+        let explicit: Vec<String> = paths
+            .iter()
+            .filter_map(|v| v.as_str())
+            .map(|s| s.trim().to_string())
+            .filter(|s| !s.is_empty())
+            .flat_map(|p| ["--path".to_string(), p])
+            .collect();
+        if !explicit.is_empty() {
+            return explicit;
+        }
+    }
+    // Priority 2: autodiscover from sfdx-project.json
+    aer_source_args_from_sfdx(worktree).unwrap_or_default()
+}
+
+fn aer_source_args_from_sfdx(worktree: &zed::Worktree) -> Option<Vec<String>> {
+    let json = worktree.read_text_file("sfdx-project.json").ok()?;
+    let root: serde_json::Value = serde_json::from_str(&json).ok()?;
+    let dirs = root.get("packageDirectories")?.as_array()?;
+    let root_path = worktree.root_path();
+    let args: Vec<String> = dirs
+        .iter()
+        .filter_map(|d| d.get("path")?.as_str())
+        .map(|p| p.trim().to_string())
+        .filter(|p| !p.is_empty())
+        .flat_map(|p| {
+            let abs = format!("{root_path}/{p}");
+            ["--path".to_string(), abs]
+        })
+        .collect();
+    if args.is_empty() {
+        None
+    } else {
+        Some(args)
+    }
+}
+
+fn resolve_aer_binary(
+    lsp_settings: &zed::settings::LspSettings,
+    shell_env: &zed::EnvVars,
+    worktree: &zed::Worktree,
+) -> zed::Result<String> {
+    // Priority 1: lsp.apex-lsp.binary.path
+    if let Some(binary) = &lsp_settings.binary {
+        if let Some(path) = &binary.path {
+            return Ok(path.clone());
+        }
+    }
+    // Priority 2: lsp.apex-lsp.settings.aer_path
+    if let Some(aer_path) = setting_value(lsp_settings, "aer_path")
+        .and_then(|v| v.as_str())
+        .map(|s| s.trim().to_string())
+        .filter(|s| !s.is_empty())
+    {
+        return Ok(aer_path);
+    }
+    // Priority 3: worktree.which (may use restricted PATH in worktree-shell)
+    if let Some(path) = worktree.which(AER_BINARY_NAME) {
+        return Ok(path);
+    }
+    // Priority 4: search full shell PATH via std::fs::metadata
+    // worktree.which() may miss binaries in user dirs like ~/.cargo/bin because it
+    // uses the worktree-shell PATH (a Zed limitation). shell_env has the full PATH.
+    if let Some(path) = find_in_shell_path(AER_BINARY_NAME, shell_env) {
+        return Ok(path);
+    }
+    Err(format!(
+        "aer binary not found. Install from https://github.com/octoberswimmer/aer-dist/ \
+         or set 'aer_path' in lsp.apex-lsp.settings"
+    ))
+}
+
+fn find_in_shell_path(name: &str, shell_env: &zed::EnvVars) -> Option<String> {
+    let path_var = env_var(shell_env, "PATH")?;
+    for dir in path_var.split(':') {
+        if dir.is_empty() {
+            continue;
+        }
+        let candidate = std::path::Path::new(dir).join(name);
+        if std::fs::metadata(&candidate).is_ok() {
+            return Some(candidate.to_string_lossy().into_owned());
+        }
+    }
+    None
 }
 
 fn resolve_java_command(
