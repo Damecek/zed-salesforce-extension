@@ -1,3 +1,4 @@
+use std::path::Path;
 use zed_extension_api as zed;
 use zed_extension_api::serde_json;
 
@@ -149,7 +150,7 @@ fn aer_source_args_from_sfdx(worktree: &zed::Worktree) -> Option<Vec<String>> {
         .map(|p| p.trim().to_string())
         .filter(|p| !p.is_empty())
         .flat_map(|p| {
-            let abs = format!("{root_path}/{p}");
+            let abs = normalize_source_path(&root_path, &p);
             ["--path".to_string(), abs]
         })
         .collect();
@@ -207,6 +208,18 @@ fn find_in_shell_path(name: &str, shell_env: &zed::EnvVars) -> Option<String> {
         }
     }
     None
+}
+
+fn normalize_source_path(root_path: &str, package_path: &str) -> String {
+    let package_path = Path::new(package_path);
+    if package_path.is_absolute() {
+        return package_path.to_string_lossy().into_owned();
+    }
+
+    Path::new(root_path)
+        .join(package_path)
+        .to_string_lossy()
+        .into_owned()
 }
 
 fn resolve_java_command(
@@ -303,5 +316,26 @@ fn value_to_u64(value: &serde_json::Value) -> Option<u64> {
         serde_json::Value::Number(number) => number.as_u64(),
         serde_json::Value::String(text) => text.trim().parse().ok(),
         _ => None,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::normalize_source_path;
+
+    #[test]
+    fn normalize_source_path_joins_relative_package_directory() {
+        assert_eq!(
+            normalize_source_path("/workspace/project", "force-app/main/default"),
+            "/workspace/project/force-app/main/default"
+        );
+    }
+
+    #[test]
+    fn normalize_source_path_preserves_absolute_package_directory() {
+        assert_eq!(
+            normalize_source_path("/workspace/project", "/tmp/force-app"),
+            "/tmp/force-app"
+        );
     }
 }
