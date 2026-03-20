@@ -25,7 +25,7 @@ Primary references for this architecture:
   https://github.com/forcedotcom/salesforcedx-vscode.git
 - Key Apex LSP bootstrap file (upstream path):
   `packages/salesforcedx-vscode-apex/src/languageServer.ts`
-- Apex Language Server jar currently shipped by this extension:
+- Apex Language Server jar currently tracked in this repository for provenance and local smoke tests:
   `vendor/apex-jorje-lsp.jar`
 - Official Salesforce Apex Language Server docs:
   https://developer.salesforce.com/docs/platform/sfvscode-extensions/guide/apex-language-server.html
@@ -210,10 +210,12 @@ In Rust extension code (`src/lib.rs`):
 
 ## 5) Current Apex jar sourcing (decision)
 
-For this project, we **ship the jar inside the extension** for deterministic, versioned behavior.
+For this project, the extension runtime **downloads and caches the jar on first use** inside the
+extension work directory.
 
-- Vendored jar in this repo: `vendor/apex-jorje-lsp.jar` (+ SHA in `vendor/apex-jorje-lsp.jar.sha256`)
-- Runtime jar path used by the extension: `extensions/installed/salesforce/vendor/apex-jorje-lsp.jar`
+- Canonical runtime source: the pinned upstream jar URL from `forcedotcom/salesforcedx-vscode`
+- Cached runtime jar path: `<extension-workdir>/lsp/apex-lsp/apex-jorje-lsp.jar`
+- Vendored jar in this repo: `vendor/apex-jorje-lsp.jar` (+ SHA in `vendor/apex-jorje-lsp.jar.sha256`) for provenance and repeatable local smoke tests
 
 ## 6) Java runtime acquisition strategy
 
@@ -222,6 +224,7 @@ Required capability in extension logic:
 - Prefer explicit Zed LSP setting for this server (e.g. `lsp.apex-lsp.binary.path` pointing to a `java` executable).
 - Support explicit Java home via `lsp.apex-lsp.settings.java_home` (resolved as `<java_home>/bin/java`).
 - Fallback to `JDK_HOME`, then `JAVA_HOME`.
+- Auto-install the Apex jar on first launch and reuse the cached copy on subsequent launches.
 - Validate:
   - directory exists
   - `bin/java` present
@@ -329,7 +332,7 @@ What changed:
 - Added Apex language configuration in `languages/apex/config.toml` with file suffixes `.cls`, `.trigger`, and `.apex`.
 - Added baseline syntax highlighting query in `languages/apex/highlights.scm` sourced from upstream pinned grammar revision.
 - Registered SOQL/SOSL/Salesforce Log grammars and added language configs + highlights for `.soql`, `.sosl`, and `.sflog` (and `.log`) as part of broader Salesforce DX language support.
-- Implemented Apex LSP launch command wiring in `src/lib.rs` (Java resolution + vendored jar launch).
+- Implemented Apex LSP launch command wiring in `src/lib.rs` (Java resolution + managed jar download/cache).
 - Removed the temporary Python stdio proxy; Apex LSP is now launched directly through Java.
 - Added deterministic smoke test automation:
   - `scripts/test-lsp-launch.sh`
@@ -344,9 +347,9 @@ Why:
 How to verify:
 
 1. Run `cargo check` to validate Rust extension scaffold builds.
-2. Run `./scripts/test-lsp-launch.sh` to verify Java resolution, jar checksum, and Apex LSP completion against both a fixture SFDX workspace root and a nested SFDX workspace inside a monorepo-style root.
+2. Run `./scripts/test-lsp-launch.sh` to verify Java resolution, the vendored provenance jar checksum, and Apex LSP completion against both a fixture SFDX workspace root and a nested SFDX workspace inside a monorepo-style root.
 3. Install as a dev extension in Zed and open `.cls` / `.trigger` / `.apex` files.
-4. Confirm Apex mode is selected, comments/keywords/strings are highlighted, and Apex LSP starts when opening an SFDX project root. Optionally also verify the currently tested nested monorepo scenario.
+4. Confirm Apex mode is selected, comments/keywords/strings are highlighted, and Apex LSP starts when opening an SFDX project root. On first launch the extension should download the jar into its work directory, then reuse the cached copy on later launches. Optionally also verify the currently tested nested monorepo scenario.
 
 ## MVP Scope (Phase 1)
 
@@ -394,7 +397,7 @@ How to verify:
 `scripts/test-lsp-launch.sh` provides deterministic process-level validation:
 
 1. Resolves Java path (setting/env simulation).
-2. Verifies jar existence, and if `vendor/apex-jorje-lsp.jar.sha256` exists, validates the checksum.
+2. Verifies vendored provenance jar existence, and if `vendor/apex-jorje-lsp.jar.sha256` exists, validates the checksum.
 3. Runs short-lived Apex LSP launch smoke tests (current backend):
    - start the process
    - perform a minimal LSP handshake over stdio
@@ -450,7 +453,7 @@ Even if full GUI assertion is hard, log-based validation is practical for agents
 
 - Current LSP engine (Apex): Salesforce `apex-jorje-lsp.jar`.
 - Runtime: Java (11+ required, Java 21 recommended).
-- Editor integration: Zed extension with Rust `language_server_command` launcher.
+- Editor integration: Zed extension with Rust `language_server_command` launcher and managed Apex jar download/cache.
 - Highlighting baseline: Tree-sitter (`highlights.scm`), semantic tokens optional enhancement.
 - MVP goal: reliable startup + baseline coding ergonomics across Salesforce DX languages before advanced features.
 

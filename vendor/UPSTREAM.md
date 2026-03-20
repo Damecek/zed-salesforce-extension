@@ -1,6 +1,6 @@
 # Apex LSP Jar Provenance (Current Salesforce DX Backend)
 
-This extension currently vendors the Salesforce Apex Language Server jar as the Apex backend within a broader Salesforce DX extension:
+This repository currently vendors the Salesforce Apex Language Server jar for provenance, checksum pinning, and repeatable local smoke tests within a broader Salesforce DX extension:
 
 - `vendor/apex-jorje-lsp.jar`
 - SHA-256 (hex) in `vendor/apex-jorje-lsp.jar.sha256`

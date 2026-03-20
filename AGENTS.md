@@ -58,7 +58,7 @@ When code implementation begins, contributors should generally work toward:
 - `languages/apex/config.toml`
 - `languages/apex/highlights.scm`
 - `languages/soql|sosl|sflog/*` baseline language metadata/highlighting
-- jar sourcing strategy (vendored jar)
+- jar sourcing strategy (managed download with vendored provenance)
 
 ## Java + Jar Runtime Expectations
 

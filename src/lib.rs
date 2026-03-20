@@ -2,11 +2,12 @@ use std::ffi::OsString;
 use std::path::Path;
 use zed_extension_api as zed;
 use zed_extension_api::serde_json;
+use zed_extension_api::{DownloadedFileType, LanguageServerInstallationStatus};
 
-const EXTENSION_ID: &str = "salesforce-dx";
 const APEX_LSP_ID: &str = "apex-lsp";
 const APEX_LSP_MAIN_CLASS: &str = "apex.jorje.lsp.ApexLanguageServerLauncher";
-const APEX_LSP_JAR_REL_PATH: &str = "vendor/apex-jorje-lsp.jar";
+const APEX_LSP_JAR_CACHE_REL_PATH: &str = "lsp/apex-lsp/apex-jorje-lsp.jar";
+const APEX_LSP_JAR_DOWNLOAD_URL: &str = "https://raw.githubusercontent.com/forcedotcom/salesforcedx-vscode/67dc27932e0ce43b93abe00878a2f966d0eb16a3/packages/salesforcedx-vscode-apex/jars/apex-jorje-lsp.jar";
 const APEX_LSP_DEFAULT_JVM_PROPERTIES: [(&str, &str); 3] = [
     ("debug.internal.errors", "true"),
     ("debug.completion.statistics", "false"),
@@ -45,7 +46,7 @@ impl zed::Extension for SalesforceExtension {
         match resolve_backend(&lsp_settings) {
             ApexLspBackend::Aer => build_aer_command(&lsp_settings, shell_env, worktree),
             ApexLspBackend::Jorje => {
-                let jar_path = resolve_apex_lsp_jar_path()?;
+                let jar_path = ensure_apex_lsp_jar(language_server_id)?;
                 let (java_command, mut jvm_args) =
                     resolve_java_command(&lsp_settings, &shell_env, worktree);
                 jvm_args.push("-cp".to_string());
@@ -63,32 +64,66 @@ impl zed::Extension for SalesforceExtension {
 
 zed::register_extension!(SalesforceExtension);
 
-fn resolve_apex_lsp_jar_path() -> zed::Result<String> {
-    // Important: the extension runs in a WASI sandbox. It cannot reliably stat/read files outside
-    // its work directory, but it *can* pass absolute host paths to child processes (Java), which
-    // will resolve them on the host filesystem. So we avoid `std::fs::metadata` checks here.
-    //
-    // Zed layout:
-    // - work dir:      .../extensions/work/<id>
-    // - install dir:   .../extensions/installed/<id>  (for dev extensions this is a symlink to the repo)
+fn ensure_apex_lsp_jar(language_server_id: &zed::LanguageServerId) -> zed::Result<String> {
     let work_dir = std::env::current_dir().map_err(|err| err.to_string())?;
+    let jar_rel_path = std::path::Path::new(APEX_LSP_JAR_CACHE_REL_PATH);
+    let jar_abs_path = work_dir.join(jar_rel_path);
 
-    // .../extensions/work/<id> -> .../extensions/installed/<id>
-    let installed_dir = work_dir
-        .parent()
-        .and_then(|p| p.parent())
-        .map(|extensions_dir| extensions_dir.join("installed").join(EXTENSION_ID))
-        .ok_or_else(|| {
+    if jar_abs_path.is_file() {
+        zed::set_language_server_installation_status(
+            language_server_id,
+            &LanguageServerInstallationStatus::None,
+        );
+        return Ok(jar_abs_path.to_string_lossy().into_owned());
+    }
+
+    if let Some(parent) = jar_abs_path.parent() {
+        std::fs::create_dir_all(parent).map_err(|err| {
             format!(
-                "Could not derive extension installed directory from {}",
-                work_dir.display()
+                "Could not create Apex Language Server cache directory {}: {err}",
+                parent.display()
             )
         })?;
+    }
 
-    Ok(installed_dir
-        .join(APEX_LSP_JAR_REL_PATH)
-        .to_string_lossy()
-        .into_owned())
+    zed::set_language_server_installation_status(
+        language_server_id,
+        &LanguageServerInstallationStatus::Downloading,
+    );
+
+    if let Err(err) = zed::download_file(
+        APEX_LSP_JAR_DOWNLOAD_URL,
+        APEX_LSP_JAR_CACHE_REL_PATH,
+        DownloadedFileType::Uncompressed,
+    ) {
+        let message = format!(
+            "Failed to download Apex Language Server jar from {APEX_LSP_JAR_DOWNLOAD_URL}: {err}"
+        );
+        zed::set_language_server_installation_status(
+            language_server_id,
+            &LanguageServerInstallationStatus::Failed(message.clone()),
+        );
+        return Err(message);
+    }
+
+    if !jar_abs_path.is_file() {
+        let message = format!(
+            "Apex Language Server download completed but {} was not created",
+            jar_abs_path.display()
+        );
+        zed::set_language_server_installation_status(
+            language_server_id,
+            &LanguageServerInstallationStatus::Failed(message.clone()),
+        );
+        return Err(message);
+    }
+
+    zed::set_language_server_installation_status(
+        language_server_id,
+        &LanguageServerInstallationStatus::None,
+    );
+
+    Ok(jar_abs_path.to_string_lossy().into_owned())
 }
 
 fn resolve_backend(lsp_settings: &zed::settings::LspSettings) -> ApexLspBackend {

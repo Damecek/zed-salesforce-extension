@@ -1,5 +1,5 @@
-id = "salesforce-dx"
-name = "Salesforce DX"
+id = "salesforce"
+name = "Salesforce"
 version = "0.0.2"
 schema_version = 1
 authors = ["zed-salesforce-extension contributors"]
