@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema#",
+  "title": "AER debug configuration",
+  "description": "Launch Apex tests through the aer CLI in DAP debug mode.",
+  "type": "object",
+  "properties": {
+    "label": {
+      "type": "string",
+      "description": "Human-readable name shown in Zed."
+    },
+    "adapter": {
+      "type": "string",
+      "const": "aer",
+      "description": "The Zed debug adapter id."
+    },
+    "request": {
+      "type": "string",
+      "enum": ["launch"],
+      "description": "AER test debugging currently supports launch requests only."
+    },
+    "args": {
+      "type": "array",
+      "description": "Arguments passed to `aer test --debug`. Defaults to ['.'] when omitted.",
+      "items": {
+        "type": "string"
+      }
+    },
+    "stopOnEntry": {
+      "type": "boolean",
+      "description": "Passed through to the AER debug adapter launch request."
+    },
+    "aerPath": {
+      "type": "string",
+      "description": "Optional path to the aer executable. Overrides PATH lookup for this debug configuration."
+    },
+    "timeout": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Optional per-test timeout in seconds. Passed to `aer test --timeout`."
+    },
+    "cwd": {
+      "type": "string",
+      "description": "Optional working directory for the adapter process. Defaults to the worktree root."
+    }
+  },
+  "required": ["label", "adapter", "request"],
+  "additionalProperties": true
+}

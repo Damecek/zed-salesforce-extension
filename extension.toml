@@ -6,6 +6,9 @@ authors = ["zed-salesforce-extension contributors"]
 description = "Salesforce DX language support for Zed (MVP bootstrap; Apex LSP backend)."
 repository = "https://github.com/Damecek/zed-salesforce-extension"
 
+[debug_adapters.aer]
+schema_path = "debug_adapter_schemas/aer.json"
+
 [language_servers.apex-lsp]
 name = "Apex Language Server"
 languages = ["Apex"]

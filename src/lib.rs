@@ -1,7 +1,8 @@
 use std::ffi::OsString;
 use std::path::Path;
+
 use zed_extension_api as zed;
-use zed_extension_api::serde_json;
+use zed_extension_api::serde_json::{self, json};
 
 const EXTENSION_ID: &str = "salesforce-dx";
 const APEX_LSP_ID: &str = "apex-lsp";
@@ -15,6 +16,7 @@ const APEX_LSP_DEFAULT_JVM_PROPERTIES: [(&str, &str); 3] = [
 const DEFAULT_JAVA_MAX_HEAP_MB: u64 = 2048;
 const AER_BINARY_NAME: &str = "aer";
 const AER_BACKEND_SETTING_KEY: &str = "backend";
+const AER_DEBUG_ADAPTER_ID: &str = "aer";
 
 #[derive(Debug, PartialEq)]
 enum ApexLspBackend {
@@ -39,8 +41,7 @@ impl zed::Extension for SalesforceExtension {
         }
 
         let shell_env = worktree.shell_env();
-        let lsp_settings =
-            zed::settings::LspSettings::for_worktree(APEX_LSP_ID, worktree).unwrap_or_default();
+        let lsp_settings = read_lsp_settings(worktree);
 
         match resolve_backend(&lsp_settings) {
             ApexLspBackend::Aer => build_aer_command(&lsp_settings, shell_env, worktree),
@@ -59,9 +60,71 @@ impl zed::Extension for SalesforceExtension {
             }
         }
     }
+
+    fn get_dap_binary(
+        &mut self,
+        adapter_name: String,
+        config: zed::DebugTaskDefinition,
+        user_provided_debug_adapter_path: Option<String>,
+        worktree: &zed::Worktree,
+    ) -> zed::Result<zed::DebugAdapterBinary> {
+        if adapter_name != AER_DEBUG_ADAPTER_ID {
+            return Err(format!("Unknown debug adapter id: {adapter_name}"));
+        }
+
+        if config.tcp_connection.is_some() {
+            return Err(
+                "AER debug mode uses stdio transport; tcp_connection is not supported.".to_string(),
+            );
+        }
+
+        let shell_env = worktree.shell_env();
+        let lsp_settings = read_lsp_settings(worktree);
+        let debug_config = parse_debug_task_config(&config.config)?;
+        let aer_path = resolve_aer_debug_binary(
+            user_provided_debug_adapter_path.as_deref(),
+            debug_config.get("aerPath").and_then(|value| value.as_str()),
+            &lsp_settings,
+            &shell_env,
+            worktree,
+        )?;
+        let request = resolve_debug_request_kind_from_value(debug_config.get("request"))?;
+        let request_configuration = build_aer_debug_request_configuration(&debug_config)?;
+
+        Ok(zed::DebugAdapterBinary {
+            command: Some(aer_path),
+            arguments: build_aer_debug_command_args(&debug_config)?,
+            envs: shell_env,
+            cwd: Some(resolve_aer_debug_cwd(&debug_config, worktree)),
+            connection: None,
+            request_args: zed::StartDebuggingRequestArguments {
+                configuration: request_configuration.to_string(),
+                request,
+            },
+        })
+    }
+
+    fn dap_request_kind(
+        &mut self,
+        adapter_name: String,
+        config: serde_json::Value,
+    ) -> zed::Result<zed::StartDebuggingRequestArgumentsRequest> {
+        if adapter_name != AER_DEBUG_ADAPTER_ID {
+            return Err(format!("Unknown debug adapter id: {adapter_name}"));
+        }
+
+        let config = config
+            .as_object()
+            .ok_or_else(|| "AER debug configuration must be a JSON object.".to_string())?;
+        resolve_debug_request_kind_from_value(config.get("request"))
+    }
 }
 
 zed::register_extension!(SalesforceExtension);
+
+fn read_lsp_settings(worktree: &zed::Worktree) -> zed::settings::LspSettings {
+    zed::settings::LspSettings::for_worktree(APEX_LSP_ID, worktree).unwrap_or_default()
+}
 
 fn resolve_apex_lsp_jar_path() -> zed::Result<String> {
     // Important: the extension runs in a WASI sandbox. It cannot reliably stat/read files outside
@@ -118,6 +181,126 @@ fn build_aer_command(
     })
 }
 
+fn parse_debug_task_config(
+    config: &str,
+) -> Result<serde_json::Map<String, serde_json::Value>, String> {
+    let parsed: serde_json::Value =
+        serde_json::from_str(config).map_err(|err| format!("Invalid AER debug config: {err}"))?;
+    parsed
+        .as_object()
+        .cloned()
+        .ok_or_else(|| "AER debug configuration must be a JSON object.".to_string())
+}
+
+fn resolve_debug_request_kind_from_value(
+    value: Option<&serde_json::Value>,
+) -> Result<zed::StartDebuggingRequestArgumentsRequest, String> {
+    match value.and_then(|value| value.as_str()) {
+        Some(request) if request.eq_ignore_ascii_case("launch") => {
+            Ok(zed::StartDebuggingRequestArgumentsRequest::Launch)
+        }
+        Some(request) => Err(format!(
+            "Unsupported AER debug request '{request}'. Only 'launch' is supported."
+        )),
+        None => Err("AER debug configuration must include request = 'launch'.".to_string()),
+    }
+}
+
+fn build_aer_debug_command_args(
+    config: &serde_json::Map<String, serde_json::Value>,
+) -> Result<Vec<String>, String> {
+    let request_args = debug_args_or_default(config)?;
+    let mut args = vec!["test".to_string(), "--debug".to_string()];
+
+    if let Some(timeout) = config.get("timeout").and_then(value_to_u64) {
+        args.push("--timeout".to_string());
+        args.push(timeout.to_string());
+    }
+
+    args.extend(request_args);
+    Ok(args)
+}
+
+fn build_aer_debug_request_configuration(
+    config: &serde_json::Map<String, serde_json::Value>,
+) -> Result<serde_json::Value, String> {
+    let args = debug_args_or_default(config)?;
+    let stop_on_entry = config
+        .get("stopOnEntry")
+        .and_then(|value| value.as_bool())
+        .unwrap_or(false);
+
+    let mut request = serde_json::Map::new();
+    request.insert("request".to_string(), json!("launch"));
+    request.insert("args".to_string(), json!(args));
+    request.insert("stopOnEntry".to_string(), json!(stop_on_entry));
+
+    if let Some(timeout) = config.get("timeout").and_then(value_to_u64) {
+        request.insert("timeout".to_string(), json!(timeout));
+    }
+
+    Ok(serde_json::Value::Object(request))
+}
+
+fn debug_args_or_default(
+    config: &serde_json::Map<String, serde_json::Value>,
+) -> Result<Vec<String>, String> {
+    let args = string_array(config.get("args"), "args")?;
+    if args.is_empty() {
+        Ok(vec![".".to_string()])
+    } else {
+        Ok(args)
+    }
+}
+
+fn resolve_aer_debug_cwd(
+    config: &serde_json::Map<String, serde_json::Value>,
+    worktree: &zed::Worktree,
+) -> String {
+    config
+        .get("cwd")
+        .and_then(|value| value.as_str())
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .map(ToOwned::to_owned)
+        .unwrap_or_else(|| worktree.root_path())
+}
+
+fn resolve_aer_debug_binary(
+    user_provided_debug_adapter_path: Option<&str>,
+    debug_config_aer_path: Option<&str>,
+    lsp_settings: &zed::settings::LspSettings,
+    shell_env: &zed::EnvVars,
+    worktree: &zed::Worktree,
+) -> zed::Result<String> {
+    if let Some(path) = trim_non_empty(user_provided_debug_adapter_path) {
+        return Ok(path.to_string());
+    }
+
+    if let Some(path) = trim_non_empty(debug_config_aer_path) {
+        return Ok(path.to_string());
+    }
+
+    let include_binary_path = resolve_backend(lsp_settings) == ApexLspBackend::Aer;
+    if let Some(path) = aer_path_from_lsp_settings(lsp_settings, include_binary_path) {
+        return Ok(path);
+    }
+
+    if let Some(path) = worktree.which(AER_BINARY_NAME) {
+        return Ok(path);
+    }
+
+    if let Some(path) = find_in_shell_path(AER_BINARY_NAME, shell_env) {
+        return Ok(path);
+    }
+
+    Err(
+        "aer binary not found. Configure dap.aer.binary, set 'aerPath' in .zed/debug.json, \
+         or set 'lsp.apex-lsp.settings.aer_path'."
+            .to_string(),
+    )
+}
+
 fn resolve_aer_source_args(
     lsp_settings: &zed::settings::LspSettings,
     worktree: &zed::Worktree,
@@ -167,35 +350,66 @@ fn resolve_aer_binary(
     shell_env: &zed::EnvVars,
     worktree: &zed::Worktree,
 ) -> zed::Result<String> {
-    // Priority 1: lsp.apex-lsp.binary.path
-    if let Some(binary) = &lsp_settings.binary {
-        if let Some(path) = &binary.path {
-            return Ok(path.clone());
-        }
+    if let Some(path) = aer_path_from_lsp_settings(lsp_settings, true) {
+        return Ok(path);
     }
-    // Priority 2: lsp.apex-lsp.settings.aer_path
-    if let Some(aer_path) = setting_value(lsp_settings, "aer_path")
-        .and_then(|v| v.as_str())
-        .map(|s| s.trim().to_string())
-        .filter(|s| !s.is_empty())
-    {
-        return Ok(aer_path);
-    }
-    // Priority 3: worktree.which (may use restricted PATH in worktree-shell)
+
     if let Some(path) = worktree.which(AER_BINARY_NAME) {
         return Ok(path);
     }
-    // Priority 4: rely on the full shell PATH when worktree.which() misses user dirs.
-    // worktree.which() may miss binaries in user dirs like ~/.cargo/bin because it
-    // uses the worktree-shell PATH (a Zed limitation). shell_env has the full PATH,
-    // and the host process resolver can search it when we return a bare command name.
+
     if let Some(path) = find_in_shell_path(AER_BINARY_NAME, shell_env) {
         return Ok(path);
     }
+
     Err(format!(
         "aer binary not found. Install from https://github.com/octoberswimmer/aer-dist/ \
          or set 'aer_path' in lsp.apex-lsp.settings"
     ))
+}
+
+fn aer_path_from_lsp_settings(
+    lsp_settings: &zed::settings::LspSettings,
+    include_binary_path: bool,
+) -> Option<String> {
+    if include_binary_path {
+        if let Some(binary) = &lsp_settings.binary {
+            if let Some(path) = trim_non_empty(binary.path.as_deref()) {
+                return Some(path.to_string());
+            }
+        }
+    }
+
+    trim_non_empty(
+        setting_value(lsp_settings, "aer_path")
+            .and_then(|v| v.as_str())
+            .map(str::trim),
+    )
+    .map(ToOwned::to_owned)
+}
+
+fn trim_non_empty(value: Option<&str>) -> Option<&str> {
+    value.map(str::trim).filter(|value| !value.is_empty())
+}
+
+fn string_array(value: Option<&serde_json::Value>, key: &str) -> Result<Vec<String>, String> {
+    match value {
+        None => Ok(Vec::new()),
+        Some(serde_json::Value::Array(values)) => values
+            .iter()
+            .map(|value| {
+                value
+                    .as_str()
+                    .map(str::trim)
+                    .filter(|value| !value.is_empty())
+                    .map(ToOwned::to_owned)
+                    .ok_or_else(|| format!("AER debug config '{key}' entries must be strings."))
+            })
+            .collect(),
+        Some(_) => Err(format!(
+            "AER debug config '{key}' must be an array of strings."
+        )),
+    }
 }
 
 fn find_in_shell_path(name: &str, shell_env: &zed::EnvVars) -> Option<String> {
@@ -322,7 +536,14 @@ fn value_to_u64(value: &serde_json::Value) -> Option<u64> {
 
 #[cfg(test)]
 mod tests {
-    use super::{find_in_shell_path, normalize_source_path};
+    use super::{
+        aer_path_from_lsp_settings, build_aer_debug_command_args,
+        build_aer_debug_request_configuration, debug_args_or_default, find_in_shell_path,
+        normalize_source_path, parse_debug_task_config, resolve_backend,
+        resolve_debug_request_kind_from_value, ApexLspBackend,
+    };
+    use zed_extension_api as zed;
+    use zed_extension_api::serde_json::{self, json};
 
     #[test]
     fn normalize_source_path_joins_relative_package_directory() {
@@ -355,5 +576,96 @@ mod tests {
         let shell_env = Vec::new();
 
         assert_eq!(find_in_shell_path("aer", &shell_env), None);
+    }
+
+    #[test]
+    fn parse_debug_task_config_requires_json_object() {
+        let err = parse_debug_task_config("[]").unwrap_err();
+        assert!(err.contains("JSON object"));
+    }
+
+    #[test]
+    fn resolve_debug_request_kind_accepts_launch() {
+        let request = resolve_debug_request_kind_from_value(Some(&json!("launch"))).unwrap();
+        assert_eq!(request, zed::StartDebuggingRequestArgumentsRequest::Launch);
+    }
+
+    #[test]
+    fn resolve_debug_request_kind_rejects_attach() {
+        let err = resolve_debug_request_kind_from_value(Some(&json!("attach"))).unwrap_err();
+        assert!(err.contains("Only 'launch'"));
+    }
+
+    #[test]
+    fn debug_command_defaults_to_current_directory() {
+        let config = serde_json::Map::new();
+        assert_eq!(
+            build_aer_debug_command_args(&config).unwrap(),
+            vec!["test", "--debug", "."]
+        );
+    }
+
+    #[test]
+    fn debug_command_includes_timeout_and_args() {
+        let config =
+            parse_debug_task_config(r#"{"request":"launch","args":["force-app"],"timeout":45}"#)
+                .unwrap();
+        assert_eq!(
+            build_aer_debug_command_args(&config).unwrap(),
+            vec!["test", "--debug", "--timeout", "45", "force-app"]
+        );
+    }
+
+    #[test]
+    fn debug_request_configuration_filters_to_adapter_fields() {
+        let config = parse_debug_task_config(
+            r#"{"label":"Debug tests","adapter":"aer","request":"launch","args":["force-app"],"stopOnEntry":true,"aerPath":"/tmp/aer","cwd":"/tmp/work"}"#,
+        )
+        .unwrap();
+        assert_eq!(
+            build_aer_debug_request_configuration(&config).unwrap(),
+            json!({
+                "request": "launch",
+                "args": ["force-app"],
+                "stopOnEntry": true
+            })
+        );
+    }
+
+    #[test]
+    fn debug_args_reject_non_string_entries() {
+        let config = parse_debug_task_config(r#"{"args":[42]}"#).unwrap();
+        let err = debug_args_or_default(&config).unwrap_err();
+        assert!(err.contains("entries must be strings"));
+    }
+
+    #[test]
+    fn resolve_backend_prefers_aer_setting() {
+        let settings = zed::settings::LspSettings {
+            binary: None,
+            initialization_options: None,
+            settings: Some(json!({"backend":"aer"})),
+        };
+
+        assert_eq!(resolve_backend(&settings), ApexLspBackend::Aer);
+    }
+
+    #[test]
+    fn aer_path_from_lsp_settings_reads_binary_path_when_enabled() {
+        let settings = zed::settings::LspSettings {
+            binary: Some(zed::settings::CommandSettings {
+                path: Some("/tmp/aer".to_string()),
+                arguments: None,
+                env: None,
+            }),
+            initialization_options: None,
+            settings: Some(json!({})),
+        };
+
+        assert_eq!(
+            aer_path_from_lsp_settings(&settings, true),
+            Some("/tmp/aer".to_string())
+        );
+        assert_eq!(aer_path_from_lsp_settings(&settings, false), None);
     }
 }

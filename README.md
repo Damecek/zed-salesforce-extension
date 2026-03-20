@@ -13,6 +13,12 @@ Build a **Zed extension** that enables Salesforce DX development with a practica
 
 This repository is in **MVP bootstrap implementation**: core language support and Apex LSP startup wiring are in place, with validation/operational hardening still in progress.
 
+## Zed Version Compatibility
+
+- Apex language and LSP support now build against `zed_extension_api 0.7.x`.
+- Minimum supported Zed version for this extension is `0.205.x`.
+- Older Zed builds that only support `zed_extension_api 0.1.x` cannot load the AER debugger integration added in this repository.
+
 ## Source Documentation and Inputs
 
 Primary references for this architecture:
@@ -21,6 +27,8 @@ Primary references for this architecture:
   https://zed.dev/docs/extensions/developing-extensions
 - Zed language extensions docs (grammar, `config.toml`, language servers):
   https://zed.dev/docs/extensions/languages
+- Zed debugger extension docs:
+  https://zed.dev/docs/extensions/debugger-extensions
 - Salesforce VS Code extension source (upstream):
   https://github.com/forcedotcom/salesforcedx-vscode.git
 - Key Apex LSP bootstrap file (upstream path):
@@ -208,6 +216,47 @@ In Rust extension code (`src/lib.rs`):
 - Apex LSP is launched directly via Java; the extension does not require Python or rewrite LSP
   initialize traffic.
 
+## 4b) Experimental AER Debugger Wiring
+
+This extension now registers an experimental `aer` debug adapter for Zed.
+
+- Adapter id: `aer`
+- Schema file: `debug_adapter_schemas/aer.json`
+- Current scope: Apex test debugging only via `aer test --debug`
+- Transport: stdio
+
+### Key runtime behavior
+
+- Zed starts the adapter by launching `aer test --debug ...` directly.
+- The adapter path resolution order is:
+  - `dap.aer.binary`
+  - `aerPath` in `.zed/debug.json`
+  - `lsp.apex-lsp.binary.path` when `lsp.apex-lsp.settings.backend = "aer"`
+  - `lsp.apex-lsp.settings.aer_path`
+  - `PATH`
+- The extension passes `request = "launch"`, `args`, `stopOnEntry`, and optional `timeout` into the DAP launch request.
+
+### Current limitations
+
+- `attach` is not supported.
+- Anonymous Apex debugging (`aer exec --debug`) is not wired yet.
+- No attempt is made to import or rewrite `.vscode/launch.json`; use `.zed/debug.json`.
+- The adapter is always registered, but startup fails with a clear error if `aer` cannot be resolved.
+
+### Example `.zed/debug.json`
+
+```json
+[
+  {
+    "label": "Debug Apex tests",
+    "adapter": "aer",
+    "request": "launch",
+    "args": ["."],
+    "stopOnEntry": false
+  }
+]
+```
+
 ## 5) Current Apex jar sourcing (decision)
 
 For this project, we **ship the jar inside the extension** for deterministic, versioned behavior.
@@ -330,6 +379,10 @@ What changed:
 - Added baseline syntax highlighting query in `languages/apex/highlights.scm` sourced from upstream pinned grammar revision.
 - Registered SOQL/SOSL/Salesforce Log grammars and added language configs + highlights for `.soql`, `.sosl`, and `.sflog` (and `.log`) as part of broader Salesforce DX language support.
 - Implemented Apex LSP launch command wiring in `src/lib.rs` (Java resolution + vendored jar launch).
+- Upgraded the extension to the debugger-capable Zed extension API (`zed_extension_api 0.7.x`).
+- Registered an experimental `aer` debug adapter in `extension.toml` with schema validation in `debug_adapter_schemas/aer.json`.
+- Implemented AER DAP launch wiring in `src/lib.rs` using stdio transport via `aer test --debug`.
+- Added a standalone AER DAP smoke test script at `scripts/aer_dap_smoke.py`.
 - Removed the temporary Python stdio proxy; Apex LSP is now launched directly through Java.
 - Added deterministic smoke test automation:
   - `scripts/test-lsp-launch.sh`
@@ -345,8 +398,10 @@ How to verify:
 
 1. Run `cargo check` to validate Rust extension scaffold builds.
 2. Run `./scripts/test-lsp-launch.sh` to verify Java resolution, jar checksum, and Apex LSP completion against both a fixture SFDX workspace root and a nested SFDX workspace inside a monorepo-style root.
-3. Install as a dev extension in Zed and open `.cls` / `.trigger` / `.apex` files.
-4. Confirm Apex mode is selected, comments/keywords/strings are highlighted, and Apex LSP starts when opening an SFDX project root. Optionally also verify the currently tested nested monorepo scenario.
+3. Run `python3 ./scripts/aer_dap_smoke.py` to verify AER responds to DAP initialize/launch/configurationDone over stdio.
+4. Install as a dev extension in Zed and open `.cls` / `.trigger` / `.apex` files.
+5. Confirm Apex mode is selected, comments/keywords/strings are highlighted, and Apex LSP starts when opening an SFDX project root.
+6. Create `.zed/debug.json` with the `aer` adapter example above, start a debug session, and confirm AER launches in stdio debug mode.
 
 ## MVP Scope (Phase 1)
 
@@ -432,7 +487,9 @@ Even if full GUI assertion is hard, log-based validation is practical for agents
 - Open `.soql` / `.sosl` / `.sflog` files: basic highlighting works.
 - LSP starts without configuration surprises on Java 21.
 - Completion works in a direct SFDX project root. The current smoke test also covers one monorepo-style parent worktree scenario with a nested SFDX project.
+- AER debug sessions start from `.zed/debug.json` and reach at least initialize + launch + configurationDone without protocol errors.
 - Failure mode with invalid Java path yields clear instruction.
+- Failure mode with missing `aer` yields a clear instruction mentioning `dap.aer.binary`, `aerPath`, and `lsp.apex-lsp.settings.aer_path`.
 
 ## Relevant External Implementations to Study Further
 
