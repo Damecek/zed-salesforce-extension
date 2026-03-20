@@ -1,3 +1,4 @@
+use std::ffi::OsString;
 use std::path::Path;
 use zed_extension_api as zed;
 use zed_extension_api::serde_json;
@@ -184,9 +185,10 @@ fn resolve_aer_binary(
     if let Some(path) = worktree.which(AER_BINARY_NAME) {
         return Ok(path);
     }
-    // Priority 4: search full shell PATH via std::fs::metadata
+    // Priority 4: rely on the full shell PATH when worktree.which() misses user dirs.
     // worktree.which() may miss binaries in user dirs like ~/.cargo/bin because it
-    // uses the worktree-shell PATH (a Zed limitation). shell_env has the full PATH.
+    // uses the worktree-shell PATH (a Zed limitation). shell_env has the full PATH,
+    // and the host process resolver can search it when we return a bare command name.
     if let Some(path) = find_in_shell_path(AER_BINARY_NAME, shell_env) {
         return Ok(path);
     }
@@ -198,14 +200,13 @@ fn resolve_aer_binary(
 
 fn find_in_shell_path(name: &str, shell_env: &zed::EnvVars) -> Option<String> {
     let path_var = env_var(shell_env, "PATH")?;
-    for dir in path_var.split(':') {
-        if dir.is_empty() {
-            continue;
-        }
-        let candidate = std::path::Path::new(dir).join(name);
-        if std::fs::metadata(&candidate).is_ok() {
-            return Some(candidate.to_string_lossy().into_owned());
-        }
+    let path_var = OsString::from(path_var);
+    let path_entries = std::env::split_paths(&path_var);
+    if path_entries
+        .into_iter()
+        .any(|dir| !dir.as_os_str().is_empty())
+    {
+        return Some(name.to_string());
     }
     None
 }
@@ -321,7 +322,7 @@ fn value_to_u64(value: &serde_json::Value) -> Option<u64> {
 
 #[cfg(test)]
 mod tests {
-    use super::normalize_source_path;
+    use super::{find_in_shell_path, normalize_source_path};
 
     #[test]
     fn normalize_source_path_joins_relative_package_directory() {
@@ -337,5 +338,22 @@ mod tests {
             normalize_source_path("/workspace/project", "/tmp/force-app"),
             "/tmp/force-app"
         );
+    }
+
+    #[test]
+    fn find_in_shell_path_returns_bare_command_when_path_has_entries() {
+        let shell_env = vec![("PATH".to_string(), "/usr/local/bin:/usr/bin".to_string())];
+
+        assert_eq!(
+            find_in_shell_path("aer", &shell_env),
+            Some("aer".to_string())
+        );
+    }
+
+    #[test]
+    fn find_in_shell_path_returns_none_when_path_missing() {
+        let shell_env = Vec::new();
+
+        assert_eq!(find_in_shell_path("aer", &shell_env), None);
     }
 }
