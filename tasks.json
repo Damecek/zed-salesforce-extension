@@ -1,0 +1,172 @@
+[
+  {
+    "label": "sf: project deploy start",
+    "command": "sf",
+    "args": ["project", "deploy", "start", "--ignore-conflicts"],
+    "cwd": "$ZED_WORKTREE_ROOT",
+    "allow_concurrent_runs": false,
+    "reveal": "always",
+    "hide": "never"
+  },
+  {
+    "label": "sf: project retrieve start",
+    "command": "sf",
+    "args": ["project", "retrieve", "start", "--ignore-conflicts"],
+    "cwd": "$ZED_WORKTREE_ROOT",
+    "allow_concurrent_runs": false,
+    "reveal": "always",
+    "hide": "never"
+  },
+  {
+    "label": "sf: project deploy validate",
+    "command": "sf",
+    "args": ["project", "deploy", "validate", "--ignore-conflicts"],
+    "cwd": "$ZED_WORKTREE_ROOT",
+    "allow_concurrent_runs": false,
+    "reveal": "always",
+    "hide": "never"
+  },
+  {
+    "label": "sf: project deploy preview",
+    "command": "sf",
+    "args": ["project", "deploy", "preview"],
+    "cwd": "$ZED_WORKTREE_ROOT",
+    "allow_concurrent_runs": true,
+    "reveal": "always",
+    "hide": "never"
+  },
+  {
+    "label": "sf: project deploy quick",
+    "command": "sf",
+    "args": ["project", "deploy", "quick", "--ignore-conflicts"],
+    "cwd": "$ZED_WORKTREE_ROOT",
+    "allow_concurrent_runs": false,
+    "reveal": "always",
+    "hide": "never"
+  },
+  {
+    "label": "sf: project deploy report",
+    "command": "sf",
+    "args": ["project", "deploy", "report"],
+    "cwd": "$ZED_WORKTREE_ROOT",
+    "allow_concurrent_runs": true,
+    "reveal": "always",
+    "hide": "never"
+  },
+  {
+    "label": "sf: project retrieve preview",
+    "command": "sf",
+    "args": ["project", "retrieve", "preview"],
+    "cwd": "$ZED_WORKTREE_ROOT",
+    "allow_concurrent_runs": true,
+    "reveal": "always",
+    "hide": "never"
+  },
+  {
+    "label": "sf: org open",
+    "command": "sf",
+    "args": ["org", "open"],
+    "cwd": "$ZED_WORKTREE_ROOT",
+    "allow_concurrent_runs": false,
+    "reveal": "no_focus",
+    "hide": "on_success"
+  },
+  {
+    "label": "sf: org list",
+    "command": "sf",
+    "args": ["org", "list"],
+    "cwd": "$ZED_WORKTREE_ROOT",
+    "allow_concurrent_runs": true,
+    "reveal": "always",
+    "hide": "on_success"
+  },
+  {
+    "label": "sf: org display",
+    "command": "sf",
+    "args": ["org", "display"],
+    "cwd": "$ZED_WORKTREE_ROOT",
+    "allow_concurrent_runs": true,
+    "reveal": "always",
+    "hide": "on_success"
+  },
+  {
+    "label": "sf: org login web",
+    "command": "sf",
+    "args": ["org", "login", "web"],
+    "cwd": "$ZED_WORKTREE_ROOT",
+    "allow_concurrent_runs": false,
+    "reveal": "always",
+    "hide": "never"
+  },
+  {
+    "label": "sf: org create scratch",
+    "command": "sf",
+    "args": [
+      "org",
+      "create",
+      "scratch",
+      "-f",
+      "config/project-scratch-def.json",
+      "-a",
+      "scratch"
+    ],
+    "cwd": "$ZED_WORKTREE_ROOT",
+    "allow_concurrent_runs": false,
+    "reveal": "always",
+    "hide": "never"
+  },
+  {
+    "label": "sf: org delete scratch",
+    "command": "sf",
+    "args": ["org", "delete", "scratch", "--no-prompt"],
+    "cwd": "$ZED_WORKTREE_ROOT",
+    "allow_concurrent_runs": false,
+    "reveal": "always",
+    "hide": "never"
+  },
+  {
+    "label": "sf: package list",
+    "command": "sf",
+    "args": ["package", "list"],
+    "cwd": "$ZED_WORKTREE_ROOT",
+    "allow_concurrent_runs": true,
+    "reveal": "always",
+    "hide": "on_success"
+  },
+  {
+    "label": "sf: config list",
+    "command": "sf",
+    "args": ["config", "list"],
+    "cwd": "$ZED_WORKTREE_ROOT",
+    "allow_concurrent_runs": true,
+    "reveal": "always",
+    "hide": "on_success"
+  },
+  {
+    "label": "sf: alias list",
+    "command": "sf",
+    "args": ["alias", "list"],
+    "cwd": "$ZED_WORKTREE_ROOT",
+    "allow_concurrent_runs": true,
+    "reveal": "always",
+    "hide": "on_success"
+  },
+  {
+    "label": "sf: project reset tracking",
+    "command": "sf",
+    "args": ["project", "reset", "tracking", "--no-prompt"],
+    "cwd": "$ZED_WORKTREE_ROOT",
+    "allow_concurrent_runs": false,
+    "reveal": "always",
+    "hide": "never"
+  },
+  {
+    "label": "sf: project delete tracking",
+    "command": "sf",
+    "args": ["project", "delete", "tracking", "--no-prompt"],
+    "cwd": "$ZED_WORKTREE_ROOT",
+    "allow_concurrent_runs": false,
+    "reveal": "always",
+    "hide": "never"
+  }
+]

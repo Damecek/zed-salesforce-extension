@@ -1,50 +1,95 @@
-# [PROJECT_NAME] Constitution
-<!-- Example: Spec Constitution, TaskFlow Constitution, etc. -->
+<!--
+Sync Impact Report
+- Version change: N/A (initial) -> 1.0.0
+- Added principles: Incremental Reliability, Zed-Native Design,
+  Deterministic Baseline, Source-Format First, Automation-Ready Testing
+- Added sections: Architecture Constraints, Development Workflow
+- Templates requiring updates:
+  - .specify/templates/plan-template.md ✅ aligned (Constitution Check present)
+  - .specify/templates/spec-template.md ✅ aligned (priority-based stories)
+  - .specify/templates/tasks-template.md ✅ aligned (phased delivery)
+- Follow-up TODOs: none
+-->
+
+# Zed Salesforce Extension Constitution
 
 ## Core Principles
 
-### [PRINCIPLE_1_NAME]
-<!-- Example: I. Library-First -->
-[PRINCIPLE_1_DESCRIPTION]
-<!-- Example: Every feature starts as a standalone library; Libraries must be self-contained, independently testable, documented; Clear purpose required - no organizational-only libraries -->
+### I. Incremental Reliability
 
-### [PRINCIPLE_2_NAME]
-<!-- Example: II. CLI Interface -->
-[PRINCIPLE_2_DESCRIPTION]
-<!-- Example: Every library exposes functionality via CLI; Text in/out protocol: stdin/args → stdout, errors → stderr; Support JSON + human-readable formats -->
+Every change MUST be testable in isolation and MUST NOT regress existing
+functionality. Prefer a working subset over a broad but fragile feature set.
+New features are added only when the current baseline is stable and verified.
+Complexity MUST be justified against a simpler alternative.
 
-### [PRINCIPLE_3_NAME]
-<!-- Example: III. Test-First (NON-NEGOTIABLE) -->
-[PRINCIPLE_3_DESCRIPTION]
-<!-- Example: TDD mandatory: Tests written → User approved → Tests fail → Then implement; Red-Green-Refactor cycle strictly enforced -->
+### II. Zed-Native Design
 
-### [PRINCIPLE_4_NAME]
-<!-- Example: IV. Integration Testing -->
-[PRINCIPLE_4_DESCRIPTION]
-<!-- Example: Focus areas requiring integration tests: New library contract tests, Contract changes, Inter-service communication, Shared schemas -->
+The extension MUST follow Zed extension patterns, APIs, and conventions as
+the primary design constraint. Do not replicate VS Code-specific UX patterns
+that have no Zed equivalent. When Zed's API does not support a desired
+capability, use the closest idiomatic mechanism (e.g., task templates for CLI
+commands) rather than inventing non-standard workarounds.
 
-### [PRINCIPLE_5_NAME]
-<!-- Example: V. Observability, VI. Versioning & Breaking Changes, VII. Simplicity -->
-[PRINCIPLE_5_DESCRIPTION]
-<!-- Example: Text I/O ensures debuggability; Structured logging required; Or: MAJOR.MINOR.BUILD format; Or: Start simple, YAGNI principles -->
+### III. Deterministic Baseline
 
-## [SECTION_2_NAME]
-<!-- Example: Additional Constraints, Security Requirements, Performance Standards, etc. -->
+Tree-sitter highlighting MUST provide a usable editing experience without any
+LSP or network dependency. Language recognition, syntax coloring, bracket
+matching, and code outline MUST work offline and without an authenticated
+Salesforce org. LSP features (diagnostics, completion, hover) are additive
+enhancements that degrade gracefully when unavailable.
 
-[SECTION_2_CONTENT]
-<!-- Example: Technology stack requirements, compliance standards, deployment policies, etc. -->
+### IV. Source-Format First
 
-## [SECTION_3_NAME]
-<!-- Example: Development Workflow, Review Process, Quality Gates, etc. -->
+The extension targets modern Salesforce DX source-format projects
+(`sfdx-project.json` + `packageDirectories`). MDAPI-format and legacy project
+layouts are not primary targets. Features SHOULD assume source-format
+conventions but MUST NOT crash or block startup when the project layout is
+unexpected.
 
-[SECTION_3_CONTENT]
-<!-- Example: Code review requirements, testing gates, deployment approval process, etc. -->
+### V. Automation-Ready Testing
+
+Every testable behavior MUST have a repeatable verification path that both
+humans and AI agents can execute. Prefer scripted smoke tests and CLI-based
+validation over manual GUI-only checks. Log-based assertions are acceptable
+when GUI assertion tooling is unavailable.
+
+## Architecture Constraints
+
+- **Runtime stack**: Rust (WASI target) for the Zed extension host; Java 11+
+  (21 recommended) for the Apex Language Server backend.
+- **Grammar source**: `tree-sitter-sfapex` pinned to a specific Git revision.
+  Query files (`highlights.scm`, etc.) MUST stay in sync with the pinned
+  grammar version.
+- **LSP jar sourcing**: Managed download-and-cache on first launch. Vendored
+  jar + SHA-256 checksum in `vendor/` for provenance and offline smoke tests.
+- **Supported languages**: Apex (LSP-backed), SOQL, SOSL, Salesforce Log
+  (Tree-sitter only for now). LWC/Aura/Visualforce are planned expansions.
+- **Extension API**: `zed_extension_api` 0.7. Declarative features (task
+  templates, language configs) are preferred over Rust code when both options
+  exist.
+
+## Development Workflow
+
+- Keep README architecture sections up to date with each significant decision.
+- Include a concise "what changed / why / how to verify" note with MVP-phase
+  changes.
+- Do not introduce unrelated refactors during focused feature work.
+- Use SpecKit artifacts (`spec.md`, `plan.md`, `tasks.md`) to formalize
+  non-trivial features before implementation.
+- Commit after each logical unit of work; prefer small, reviewable diffs.
 
 ## Governance
-<!-- Example: Constitution supersedes all other practices; Amendments require documentation, approval, migration plan -->
 
-[GOVERNANCE_RULES]
-<!-- Example: All PRs/reviews must verify compliance; Complexity must be justified; Use [GUIDANCE_FILE] for runtime development guidance -->
+This constitution is the authoritative source for project-level engineering
+decisions. All contributions MUST be consistent with these principles.
+Amendments require:
 
-**Version**: [CONSTITUTION_VERSION] | **Ratified**: [RATIFICATION_DATE] | **Last Amended**: [LAST_AMENDED_DATE]
-<!-- Example: Version: 2.1.1 | Ratified: 2025-06-13 | Last Amended: 2025-07-16 -->
+1. A written rationale explaining what changed and why.
+2. A version bump following semantic versioning (MAJOR for principle
+   removal/redefinition, MINOR for additions, PATCH for clarifications).
+3. A sync impact check against SpecKit templates and AGENTS.md.
+
+Use `AGENTS.md` for runtime contributor guidance that complements (but does
+not override) this constitution.
+
+**Version**: 1.0.0 | **Ratified**: 2026-04-17 | **Last Amended**: 2026-04-17

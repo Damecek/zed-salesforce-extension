@@ -1,18 +1,22 @@
-(class_declaration
-  (class_body
-    (method_declaration
-      (modifiers
-        (modifier
-          (testMethod))) @_mod
-      name: (identifier) @run @test_method)))
-(#set! tag apex-test)
+(
+  (class_declaration
+    (class_body
+      (method_declaration
+        (modifiers
+          (modifier
+            (testMethod)))
+        name: (identifier) @run)))
+  (#set! tag apex-test)
+)
 
-(class_declaration
-  (class_body
-    (method_declaration
-      (modifiers
-        (annotation
-          name: (identifier) @_ann
-          (#eq? @_ann "isTest")))
-      name: (identifier) @run @test_method)))
-(#set! tag apex-test)
+(
+  (class_declaration
+    (class_body
+      (method_declaration
+        (modifiers
+          (annotation
+            name: (identifier) @_ann
+            (#match? @_ann "(?i)^isTest$")))
+        name: (identifier) @run)))
+  (#set! tag apex-test)
+)
