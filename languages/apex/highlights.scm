@@ -240,8 +240,8 @@
 (method_invocation
   object: (identifier) @_obj
   name: (identifier) @function.builtin
-  (#eq? @_obj "System")
-  (#eq? @function.builtin "runAs"))
+  (#match? @_obj "(?i)^System$")
+  (#match? @function.builtin "(?i)^runAs$"))
 
 ;------------------------------------------------------------------------------
 ; Variables
@@ -340,7 +340,7 @@
 (annotation
   "@" @punctuation.special
   name: (identifier) @keyword
-  (#match? @keyword "^(AuraEnabled|Deprecated|Future|InvocableMethod|InvocableVariable|IsTest|isTest|JsonAccess|NamespaceAccessible|ReadOnly|RemoteAction|SuppressWarnings|TestSetup|TestVisible|RestResource|HttpDelete|HttpGet|HttpPatch|HttpPost|HttpPut)$"))
+  (#match? @keyword "(?i)^(AuraEnabled|Deprecated|Future|InvocableMethod|InvocableVariable|IsTest|JsonAccess|NamespaceAccessible|ReadOnly|RemoteAction|SuppressWarnings|TestSetup|TestVisible|RestResource|HttpDelete|HttpGet|HttpPatch|HttpPost|HttpPut)$"))
 
 (annotation_key_value
   (identifier) @property)

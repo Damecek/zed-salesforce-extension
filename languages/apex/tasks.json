@@ -1,0 +1,88 @@
+[
+  {
+    "label": "sf: apex run test (all local)",
+    "command": "sf",
+    "args": ["apex", "run", "test", "-l", "RunLocalTests", "--synchronous", "-c", "-r", "human"],
+    "cwd": "$ZED_WORKTREE_ROOT",
+    "allow_concurrent_runs": false,
+    "reveal": "always",
+    "hide": "never"
+  },
+  {
+    "label": "sf: apex run test (current file)",
+    "command": "sf",
+    "args": ["apex", "run", "test", "--class-names", "$ZED_STEM", "--synchronous", "-c", "-r", "human"],
+    "cwd": "$ZED_WORKTREE_ROOT",
+    "allow_concurrent_runs": false,
+    "reveal": "always",
+    "hide": "never"
+  },
+  {
+    "label": "sf: apex run test (method: $ZED_SYMBOL)",
+    "command": "sf",
+    "args": ["apex", "run", "test", "--tests", "$ZED_STEM.$ZED_SYMBOL", "--synchronous", "-c", "-r", "human"],
+    "tags": ["apex-test"],
+    "cwd": "$ZED_WORKTREE_ROOT",
+    "allow_concurrent_runs": false,
+    "reveal": "always",
+    "hide": "never"
+  },
+  {
+    "label": "sf: apex run test (all in org)",
+    "command": "sf",
+    "args": ["apex", "run", "test", "-l", "RunAllTestsInOrg", "--synchronous", "-c", "-r", "human"],
+    "cwd": "$ZED_WORKTREE_ROOT",
+    "allow_concurrent_runs": false,
+    "reveal": "always",
+    "hide": "never"
+  },
+  {
+    "label": "sf: apex run (current file)",
+    "command": "sf",
+    "args": ["apex", "run", "-f", "$ZED_FILE"],
+    "cwd": "$ZED_WORKTREE_ROOT",
+    "allow_concurrent_runs": false,
+    "show_command": false,
+    "reveal": "always",
+    "hide": "never"
+  },
+  {
+    "label": "sf: apex tail log",
+    "command": "sf",
+    "args": ["apex", "tail", "log", "--color"],
+    "cwd": "$ZED_WORKTREE_ROOT",
+    "use_new_terminal": true,
+    "allow_concurrent_runs": false,
+    "reveal": "always",
+    "hide": "never"
+  },
+  {
+    "label": "sf: apex list log",
+    "command": "sf",
+    "args": ["apex", "list", "log"],
+    "cwd": "$ZED_WORKTREE_ROOT",
+    "allow_concurrent_runs": true,
+    "reveal": "always",
+    "hide": "never"
+  },
+  {
+    "label": "sf: data query (selection)",
+    "command": "sf data query --query \"$ZED_SELECTED_TEXT\" --result-format human",
+    "cwd": "$ZED_WORKTREE_ROOT",
+    "allow_concurrent_runs": true,
+    "use_new_terminal": true,
+    "show_command": false,
+    "reveal": "always",
+    "hide": "never"
+  },
+  {
+    "label": "sf: data search (selection)",
+    "command": "sf data search --query \"$ZED_SELECTED_TEXT\"",
+    "cwd": "$ZED_WORKTREE_ROOT",
+    "allow_concurrent_runs": true,
+    "use_new_terminal": true,
+    "show_command": false,
+    "reveal": "always",
+    "hide": "never"
+  }
+]
