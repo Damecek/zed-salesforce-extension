@@ -457,6 +457,18 @@ Even if full GUI assertion is hard, log-based validation is practical for agents
 - Highlighting baseline: Tree-sitter (`highlights.scm`), semantic tokens optional enhancement.
 - MVP goal: reliable startup + baseline coding ergonomics across Salesforce DX languages before advanced features.
 
+## SFDX CLI Task Templates
+
+This repository includes a `tasks.json` file with pre-configured Salesforce CLI (`sf`) task templates for common operations (deploy, retrieve, org management, etc.).
+
+Zed extensions currently have no mechanism to register commands or bundle task templates (unlike VS Code's `contributes.commands`). As a workaround, you can manually copy the file into your project's Zed configuration directory:
+
+```bash
+cp tasks.json <your-sfdx-project>/.zed/tasks.json
+```
+
+The tasks will then appear in Zed's task picker (cmd/ctrl+shift+t). All tasks use `$ZED_WORKTREE_ROOT` as the working directory, so they work from any file within the project.
+
 ## Notes for Next Contributors
 
 - Keep MVP tightly scoped to reliability first.
