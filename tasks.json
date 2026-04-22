@@ -20,7 +20,7 @@
   {
     "label": "sf: project deploy validate",
     "command": "sf",
-    "args": ["project", "deploy", "validate", "--ignore-conflicts"],
+    "args": ["project", "deploy", "validate", "--ignore-warnings"],
     "cwd": "$ZED_WORKTREE_ROOT",
     "allow_concurrent_runs": false,
     "reveal": "always",
@@ -38,7 +38,7 @@
   {
     "label": "sf: project deploy quick",
     "command": "sf",
-    "args": ["project", "deploy", "quick", "--ignore-conflicts"],
+    "args": ["project", "deploy", "quick", "--use-most-recent"],
     "cwd": "$ZED_WORKTREE_ROOT",
     "allow_concurrent_runs": false,
     "reveal": "always",
