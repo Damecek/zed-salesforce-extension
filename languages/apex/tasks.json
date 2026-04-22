@@ -18,6 +18,16 @@
     "hide": "never"
   },
   {
+    "label": "sf: apex run test (class: $ZED_SYMBOL)",
+    "command": "sf",
+    "args": ["apex", "run", "test", "--class-names", "$ZED_SYMBOL", "--synchronous", "-c", "-r", "human"],
+    "tags": ["apex-test-class"],
+    "cwd": "$ZED_WORKTREE_ROOT",
+    "allow_concurrent_runs": false,
+    "reveal": "always",
+    "hide": "never"
+  },
+  {
     "label": "sf: apex run test (method: $ZED_SYMBOL)",
     "command": "sf",
     "args": ["apex", "run", "test", "--tests", "$ZED_STEM.$ZED_SYMBOL", "--synchronous", "-c", "-r", "human"],
