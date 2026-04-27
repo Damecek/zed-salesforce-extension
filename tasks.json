@@ -72,6 +72,15 @@
     "hide": "on_success"
   },
   {
+    "label": "sf: org open (current file)",
+    "command": "sf",
+    "args": ["org", "open", "--source-file", "$ZED_FILE"],
+    "cwd": "$ZED_WORKTREE_ROOT",
+    "allow_concurrent_runs": false,
+    "reveal": "no_focus",
+    "hide": "on_success"
+  },
+  {
     "label": "sf: org list",
     "command": "sf",
     "args": ["org", "list"],
@@ -131,7 +140,7 @@
     "cwd": "$ZED_WORKTREE_ROOT",
     "allow_concurrent_runs": true,
     "reveal": "always",
-    "hide": "on_success"
+    "hide": "never"
   },
   {
     "label": "sf: config list",
@@ -140,7 +149,7 @@
     "cwd": "$ZED_WORKTREE_ROOT",
     "allow_concurrent_runs": true,
     "reveal": "always",
-    "hide": "on_success"
+    "hide": "never"
   },
   {
     "label": "sf: alias list",
@@ -149,7 +158,7 @@
     "cwd": "$ZED_WORKTREE_ROOT",
     "allow_concurrent_runs": true,
     "reveal": "always",
-    "hide": "on_success"
+    "hide": "never"
   },
   {
     "label": "sf: project reset tracking",
