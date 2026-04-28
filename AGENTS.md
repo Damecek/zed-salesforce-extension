@@ -31,9 +31,6 @@ Use these as authoritative sources:
 - In addition to the URLs above, you may use the Context7 documentation server for Zed docs/source:
   - `websites/zed_dev`
   - `zed-industries/zed`
-- Apex Language Server jar currently shipped by this extension:
-  - `vendor/apex-jorje-lsp.jar`
-  - `vendor/apex-jorje-lsp.jar.sha256`
 - Salesforce VS Code Apex extension reference implementation (upstream):
   - https://github.com/forcedotcom/salesforcedx-vscode/tree/main/packages/salesforcedx-vscode-apex/src
 - Salesforce Apex Language Server docs:
@@ -58,7 +55,7 @@ When code implementation begins, contributors should generally work toward:
 - `languages/apex/config.toml`
 - `languages/apex/highlights.scm`
 - `languages/soql|sosl|sflog/*` baseline language metadata/highlighting
-- jar sourcing strategy (managed download with vendored provenance)
+- jar sourcing strategy (managed download from a pinned upstream URL with cached SHA-256 verification)
 
 ## Java + Jar Runtime Expectations
 

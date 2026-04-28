@@ -23,6 +23,7 @@ target
 # Local clones (not vendored)
 salesforcedx-vscode/
 
+/.cache/
 /fixtures/
 /grammars/
 /scripts/__pycache__/

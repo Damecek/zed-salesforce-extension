@@ -60,8 +60,10 @@ when GUI assertion tooling is unavailable.
 - **Grammar source**: `tree-sitter-sfapex` pinned to a specific Git revision.
   Query files (`highlights.scm`, etc.) MUST stay in sync with the pinned
   grammar version.
-- **LSP jar sourcing**: Managed download-and-cache on first launch. Vendored
-  jar + SHA-256 checksum in `vendor/` for provenance and offline smoke tests.
+- **LSP jar sourcing**: Managed download-and-cache on first launch from a
+  pinned upstream URL (`forcedotcom/salesforcedx-vscode`). The local smoke
+  test downloads the same jar into a gitignored cache and verifies a pinned
+  SHA-256 checksum before launch.
 - **Supported languages**: Apex (LSP-backed), SOQL, SOSL, Salesforce Log
   (Tree-sitter only for now). LWC/Aura/Visualforce are planned expansions.
 - **Extension API**: `zed_extension_api` 0.7. Declarative features (task

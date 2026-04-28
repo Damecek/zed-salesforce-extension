@@ -34,10 +34,9 @@ When quoting, keep excerpts short; prefer paraphrase + citation.
 
 ## Local Repo “Source of Truth” Files
 
-Prefer local vendored/runtime assets when available (stable, works offline):
-- Vendored jar:
-  - `vendor/apex-jorje-lsp.jar`
-  - `vendor/apex-jorje-lsp.jar.sha256`
+Prefer local runtime assets when available (stable, works offline):
+- Apex LSP launch wiring: `src/lib.rs` (pinned jar URL + checksum-aware cache).
+- Smoke test: `scripts/test-lsp-launch.sh` (downloads the pinned jar into `.cache/apex-lsp/`).
 
 ## Output Expectations (when reporting findings)
 

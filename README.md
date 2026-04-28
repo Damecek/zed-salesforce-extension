@@ -25,8 +25,6 @@ Primary references for this architecture:
   https://github.com/forcedotcom/salesforcedx-vscode.git
 - Key Apex LSP bootstrap file (upstream path):
   `packages/salesforcedx-vscode-apex/src/languageServer.ts`
-- Apex Language Server jar currently tracked in this repository for provenance and local smoke tests:
-  `vendor/apex-jorje-lsp.jar`
 - Official Salesforce Apex Language Server docs:
   https://developer.salesforce.com/docs/platform/sfvscode-extensions/guide/apex-language-server.html
 - Official Salesforce Java setup docs for Apex runtime:
@@ -70,10 +68,7 @@ Planned structure (high-level):
 │     ├─ brackets.scm            (optional early)
 │     ├─ textobjects.scm         (optional, later)
 │     └─ injections.scm          (optional, later)
-├─ (no `grammars/` dir required; Tree-sitter grammars are fetched from Git repos declared in `extension.toml`)
-└─ vendor/
-   ├─ apex-jorje-lsp.jar
-   └─ apex-jorje-lsp.jar.sha256  (integrity check, optional but recommended)
+└─ (no `grammars/` dir required; Tree-sitter grammars are fetched from Git repos declared in `extension.toml`)
 ```
 
 ## 2) Language registration in Zed
@@ -215,7 +210,7 @@ extension work directory.
 
 - Canonical runtime source: the pinned upstream jar URL from `forcedotcom/salesforcedx-vscode`
 - Cached runtime jar path: `<extension-workdir>/lsp/apex-lsp/apex-jorje-lsp.jar`
-- Vendored jar in this repo: `vendor/apex-jorje-lsp.jar` (+ SHA in `vendor/apex-jorje-lsp.jar.sha256`) for provenance and repeatable local smoke tests
+- The local smoke test (`scripts/test-lsp-launch.sh`) downloads the same jar into `.cache/apex-lsp/` (gitignored) and verifies its SHA-256 before each run
 
 ## 6) Java runtime acquisition strategy
 
@@ -281,7 +276,7 @@ Zed also has a Restricted/Trusted worktree model:
 ### Supported workspace profile (MVP)
 
 - Primary target: an **SFDX project root** opened as the worktree root, containing `sfdx-project.json` at the top level.
-- Also observed to work: a monorepo-style worktree where an SFDX project is nested in a subdirectory. This is based on the current vendored Apex LSP behavior with the workspace root supplied by Zed; the extension does not implement explicit nested-root discovery or rewrite `rootPath`.
+- Also observed to work: a monorepo-style worktree where an SFDX project is nested in a subdirectory. This is based on the current Apex LSP behavior with the workspace root supplied by Zed; the extension does not implement explicit nested-root discovery or rewrite `rootPath`.
 - Apex and related Salesforce DX source files are located according to Salesforce DX conventions, e.g. within one of the `packageDirectories` roots (commonly `force-app/main/default/...`).
 
 Concrete examples of layouts we expect to work best:
@@ -347,7 +342,7 @@ Why:
 How to verify:
 
 1. Run `cargo check` to validate Rust extension scaffold builds.
-2. Run `./scripts/test-lsp-launch.sh` to verify Java resolution, the vendored provenance jar checksum, and Apex LSP completion against both a fixture SFDX workspace root and a nested SFDX workspace inside a monorepo-style root.
+2. Run `./scripts/test-lsp-launch.sh` to verify Java resolution, download/cache the pinned Apex LSP jar (with SHA-256 check), and exercise Apex LSP completion against both a fixture SFDX workspace root and a nested SFDX workspace inside a monorepo-style root.
 3. Install as a dev extension in Zed and open `.cls` / `.trigger` / `.apex` files.
 4. Confirm Apex mode is selected, comments/keywords/strings are highlighted, and Apex LSP starts when opening an SFDX project root. On first launch the extension should download the jar into its work directory, then reuse the cached copy on later launches. Optionally also verify the currently tested nested monorepo scenario.
 
@@ -397,7 +392,7 @@ How to verify:
 `scripts/test-lsp-launch.sh` provides deterministic process-level validation:
 
 1. Resolves Java path (setting/env simulation).
-2. Verifies vendored provenance jar existence, and if `vendor/apex-jorje-lsp.jar.sha256` exists, validates the checksum.
+2. Downloads the pinned Apex LSP jar into `.cache/apex-lsp/` if missing and validates its SHA-256 checksum.
 3. Runs short-lived Apex LSP launch smoke tests (current backend):
    - start the process
    - perform a minimal LSP handshake over stdio
