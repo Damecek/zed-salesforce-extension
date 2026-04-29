@@ -9,11 +9,31 @@
     "hide": "never"
   },
   {
+    "label": "sf: apex run test (all local, pick org)",
+    "command": "printf 'Target org alias (blank=default): ' && read ORG; sf apex run test -l RunLocalTests --synchronous -c -r human ${ORG:+--target-org} ${ORG:+\"$ORG\"}",
+    "cwd": "$ZED_WORKTREE_ROOT",
+    "allow_concurrent_runs": false,
+    "use_new_terminal": true,
+    "show_command": false,
+    "reveal": "always",
+    "hide": "never"
+  },
+  {
     "label": "sf: apex run test (current file)",
     "command": "sf",
     "args": ["apex", "run", "test", "--class-names", "$ZED_STEM", "--synchronous", "-c", "-r", "human"],
     "cwd": "$ZED_WORKTREE_ROOT",
     "allow_concurrent_runs": false,
+    "reveal": "always",
+    "hide": "never"
+  },
+  {
+    "label": "sf: apex run test (current file, pick org)",
+    "command": "printf 'Target org alias (blank=default): ' && read ORG; sf apex run test --class-names \"$ZED_STEM\" --synchronous -c -r human ${ORG:+--target-org} ${ORG:+\"$ORG\"}",
+    "cwd": "$ZED_WORKTREE_ROOT",
+    "allow_concurrent_runs": false,
+    "use_new_terminal": true,
+    "show_command": false,
     "reveal": "always",
     "hide": "never"
   },
@@ -57,6 +77,16 @@
     "hide": "never"
   },
   {
+    "label": "sf: apex run (current file, pick org)",
+    "command": "printf 'Target org alias (blank=default): ' && read ORG; sf apex run -f \"$ZED_FILE\" ${ORG:+--target-org} ${ORG:+\"$ORG\"}",
+    "cwd": "$ZED_WORKTREE_ROOT",
+    "allow_concurrent_runs": false,
+    "use_new_terminal": true,
+    "show_command": false,
+    "reveal": "always",
+    "hide": "never"
+  },
+  {
     "label": "sf: apex tail log",
     "command": "sf",
     "args": ["apex", "tail", "log", "--color"],
@@ -67,11 +97,31 @@
     "hide": "never"
   },
   {
+    "label": "sf: apex tail log (pick org)",
+    "command": "printf 'Target org alias (blank=default): ' && read ORG; sf apex tail log --color ${ORG:+--target-org} ${ORG:+\"$ORG\"}",
+    "cwd": "$ZED_WORKTREE_ROOT",
+    "use_new_terminal": true,
+    "allow_concurrent_runs": false,
+    "show_command": false,
+    "reveal": "always",
+    "hide": "never"
+  },
+  {
     "label": "sf: apex list log",
     "command": "sf",
     "args": ["apex", "list", "log"],
     "cwd": "$ZED_WORKTREE_ROOT",
     "allow_concurrent_runs": true,
+    "reveal": "always",
+    "hide": "never"
+  },
+  {
+    "label": "sf: apex list log (pick org)",
+    "command": "printf 'Target org alias (blank=default): ' && read ORG; sf apex list log ${ORG:+--target-org} ${ORG:+\"$ORG\"}",
+    "cwd": "$ZED_WORKTREE_ROOT",
+    "allow_concurrent_runs": true,
+    "use_new_terminal": true,
+    "show_command": false,
     "reveal": "always",
     "hide": "never"
   },
@@ -86,8 +136,28 @@
     "hide": "never"
   },
   {
+    "label": "sf: data query (selection, pick org)",
+    "command": "printf 'Target org alias (blank=default): ' && read ORG; sf data query --query \"$ZED_SELECTED_TEXT\" --result-format human ${ORG:+--target-org} ${ORG:+\"$ORG\"}",
+    "cwd": "$ZED_WORKTREE_ROOT",
+    "allow_concurrent_runs": true,
+    "use_new_terminal": true,
+    "show_command": false,
+    "reveal": "always",
+    "hide": "never"
+  },
+  {
     "label": "sf: data search (selection)",
     "command": "sf data search --query \"$ZED_SELECTED_TEXT\"",
+    "cwd": "$ZED_WORKTREE_ROOT",
+    "allow_concurrent_runs": true,
+    "use_new_terminal": true,
+    "show_command": false,
+    "reveal": "always",
+    "hide": "never"
+  },
+  {
+    "label": "sf: data search (selection, pick org)",
+    "command": "printf 'Target org alias (blank=default): ' && read ORG; sf data search --query \"$ZED_SELECTED_TEXT\" ${ORG:+--target-org} ${ORG:+\"$ORG\"}",
     "cwd": "$ZED_WORKTREE_ROOT",
     "allow_concurrent_runs": true,
     "use_new_terminal": true,
