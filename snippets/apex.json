@@ -5,7 +5,7 @@
       "@IsTest",
       "private class ${1:ClassName}Test {",
       "    @IsTest",
-      "    static void ${2:methodUnderTest}_${3:scenario}_${4:expected}() {",
+      "    static void ${2:methodUnderTest}() {",
       "        // Arrange",
       "        $0",
       "",
@@ -25,7 +25,7 @@
     "prefix": "testmethod",
     "body": [
       "@IsTest",
-      "static void ${1:methodUnderTest}_${2:scenario}_${3:expected}() {",
+      "static void ${1:methodUnderTest}() {",
       "    // Arrange",
       "    $0",
       "",
@@ -42,20 +42,12 @@
   },
   "Test.startTest / Test.stopTest": {
     "prefix": "startstop",
-    "body": [
-      "Test.startTest();",
-      "$0",
-      "Test.stopTest();"
-    ],
+    "body": ["Test.startTest();", "$0", "Test.stopTest();"],
     "description": "Wrap code in startTest/stopTest"
   },
   "System.runAs": {
     "prefix": "runas",
-    "body": [
-      "System.runAs(${1:user}) {",
-      "    $0",
-      "}"
-    ],
+    "body": ["System.runAs(${1:user}) {", "    $0", "}"],
     "description": "Run code under another user's context"
   },
   "SOQL for-loop": {
@@ -145,9 +137,7 @@
   },
   "Assert equal": {
     "prefix": "assertequal",
-    "body": [
-      "Assert.areEqual(${1:expected}, ${2:actual}, '${3:message}');"
-    ],
+    "body": ["Assert.areEqual(${1:expected}, ${2:actual}, '${3:message}');"],
     "description": "Assert.areEqual with message"
   },
   "Queueable scaffold": {
