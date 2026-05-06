@@ -1,4 +1,3 @@
-use std::ffi::OsString;
 use std::path::Path;
 use zed_extension_api as zed;
 use zed_extension_api::serde_json;
@@ -132,8 +131,8 @@ fn resolve_backend(lsp_settings: &zed::settings::LspSettings) -> ApexLspBackend 
         .map(|s| s.trim().to_ascii_lowercase())
         .as_deref()
     {
-        Some("aer") => ApexLspBackend::Aer,
-        _ => ApexLspBackend::Jorje,
+        Some("jorje") => ApexLspBackend::Jorje,
+        _ => ApexLspBackend::Aer,
     }
 }
 
@@ -142,7 +141,7 @@ fn build_aer_command(
     shell_env: zed::EnvVars,
     worktree: &zed::Worktree,
 ) -> zed::Result<zed::Command> {
-    let aer_path = resolve_aer_binary(lsp_settings, &shell_env, worktree)?;
+    let aer_path = resolve_aer_binary(lsp_settings, worktree)?;
     let source_args = resolve_aer_source_args(lsp_settings, worktree);
     let mut args = vec!["lsp".to_string()];
     args.extend(source_args);
@@ -199,7 +198,6 @@ fn aer_source_args_from_sfdx(worktree: &zed::Worktree) -> Option<Vec<String>> {
 
 fn resolve_aer_binary(
     lsp_settings: &zed::settings::LspSettings,
-    shell_env: &zed::EnvVars,
     worktree: &zed::Worktree,
 ) -> zed::Result<String> {
     // Priority 1: lsp.apex-lsp.binary.path
@@ -216,34 +214,14 @@ fn resolve_aer_binary(
     {
         return Ok(aer_path);
     }
-    // Priority 3: worktree.which (may use restricted PATH in worktree-shell)
+    // Priority 3: worktree.which
     if let Some(path) = worktree.which(AER_BINARY_NAME) {
-        return Ok(path);
-    }
-    // Priority 4: rely on the full shell PATH when worktree.which() misses user dirs.
-    // worktree.which() may miss binaries in user dirs like ~/.cargo/bin because it
-    // uses the worktree-shell PATH (a Zed limitation). shell_env has the full PATH,
-    // and the host process resolver can search it when we return a bare command name.
-    if let Some(path) = find_in_shell_path(AER_BINARY_NAME, shell_env) {
         return Ok(path);
     }
     Err(format!(
         "aer binary not found. Install from https://github.com/octoberswimmer/aer-dist/ \
          or set 'aer_path' in lsp.apex-lsp.settings"
     ))
-}
-
-fn find_in_shell_path(name: &str, shell_env: &zed::EnvVars) -> Option<String> {
-    let path_var = env_var(shell_env, "PATH")?;
-    let path_var = OsString::from(path_var);
-    let path_entries = std::env::split_paths(&path_var);
-    if path_entries
-        .into_iter()
-        .any(|dir| !dir.as_os_str().is_empty())
-    {
-        return Some(name.to_string());
-    }
-    None
 }
 
 fn normalize_source_path(root_path: &str, package_path: &str) -> String {
@@ -357,7 +335,7 @@ fn value_to_u64(value: &serde_json::Value) -> Option<u64> {
 
 #[cfg(test)]
 mod tests {
-    use super::{find_in_shell_path, normalize_source_path};
+    use super::normalize_source_path;
 
     #[test]
     fn normalize_source_path_joins_relative_package_directory() {
@@ -373,22 +351,5 @@ mod tests {
             normalize_source_path("/workspace/project", "/tmp/force-app"),
             "/tmp/force-app"
         );
-    }
-
-    #[test]
-    fn find_in_shell_path_returns_bare_command_when_path_has_entries() {
-        let shell_env = vec![("PATH".to_string(), "/usr/local/bin:/usr/bin".to_string())];
-
-        assert_eq!(
-            find_in_shell_path("aer", &shell_env),
-            Some("aer".to_string())
-        );
-    }
-
-    #[test]
-    fn find_in_shell_path_returns_none_when_path_missing() {
-        let shell_env = Vec::new();
-
-        assert_eq!(find_in_shell_path("aer", &shell_env), None);
     }
 }
