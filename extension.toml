@@ -3,7 +3,7 @@ name = "Salesforce"
 version = "0.0.3"
 schema_version = 1
 authors = ["zed-salesforce-extension contributors"]
-description = "Salesforce DX language support for Zed (MVP bootstrap; Apex LSP backend)."
+description = "Salesforce DX language support for Zed (Apex LSP via aer; jorje opt-in)."
 repository = "https://github.com/Damecek/zed-salesforce-extension"
 
 [language_servers.apex-lsp]

@@ -1,13 +1,12 @@
 <!--
 Sync Impact Report
-- Version change: N/A (initial) -> 1.0.0
-- Added principles: Incremental Reliability, Zed-Native Design,
-  Deterministic Baseline, Source-Format First, Automation-Ready Testing
-- Added sections: Architecture Constraints, Development Workflow
+- Version change: 1.0.0 -> 1.0.1
+- Clarified Architecture Constraints: Apex LSP backend is now `aer` by default,
+  with `jorje` as opt-in; jar-sourcing scope narrowed to the jorje backend.
 - Templates requiring updates:
-  - .specify/templates/plan-template.md ✅ aligned (Constitution Check present)
-  - .specify/templates/spec-template.md ✅ aligned (priority-based stories)
-  - .specify/templates/tasks-template.md ✅ aligned (phased delivery)
+  - .specify/templates/plan-template.md ✅ aligned
+  - .specify/templates/spec-template.md ✅ aligned
+  - .specify/templates/tasks-template.md ✅ aligned
 - Follow-up TODOs: none
 -->
 
@@ -55,15 +54,18 @@ when GUI assertion tooling is unavailable.
 
 ## Architecture Constraints
 
-- **Runtime stack**: Rust (WASI target) for the Zed extension host; Java 11+
-  (21 recommended) for the Apex Language Server backend.
+- **Runtime stack**: Rust (WASI target) for the Zed extension host. Apex LSP
+  has two selectable backends: `aer` (default, native binary, no JVM) and
+  `jorje` (opt-in, requires Java 11+; Java 21 recommended).
 - **Grammar source**: `tree-sitter-sfapex` pinned to a specific Git revision.
   Query files (`highlights.scm`, etc.) MUST stay in sync with the pinned
   grammar version.
-- **LSP jar sourcing**: Managed download-and-cache on first launch from a
-  pinned upstream URL (`forcedotcom/salesforcedx-vscode`). The local smoke
-  test downloads the same jar into a gitignored cache and verifies a pinned
-  SHA-256 checksum before launch.
+- **LSP jar sourcing (jorje backend only)**: Managed download-and-cache on
+  first launch from a pinned upstream URL
+  (`forcedotcom/salesforcedx-vscode`). The local smoke test downloads the
+  same jar into a gitignored cache and verifies a pinned SHA-256 checksum
+  before launch. The default `aer` backend is a user-installed native
+  binary and does not use this mechanism.
 - **Supported languages**: Apex (LSP-backed), SOQL, SOSL, Salesforce Log
   (Tree-sitter only for now). LWC/Aura/Visualforce are planned expansions.
 - **Extension API**: `zed_extension_api` 0.7. Declarative features (task
@@ -94,4 +96,4 @@ Amendments require:
 Use `AGENTS.md` for runtime contributor guidance that complements (but does
 not override) this constitution.
 
-**Version**: 1.0.0 | **Ratified**: 2026-04-17 | **Last Amended**: 2026-04-17
+**Version**: 1.0.1 | **Ratified**: 2026-04-17 | **Last Amended**: 2026-05-06

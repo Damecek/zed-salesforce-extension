@@ -4,7 +4,7 @@ Guidance for AI/human contributors working in this repository.
 
 ## Mission Context
 
-This repository defines a **Zed extension for Salesforce DX languages**. The current LSP backend is Salesforce's Java-based Apex Language Server (`apex-jorje-lsp.jar`) for Apex support.
+This repository defines a **Zed extension for Salesforce DX languages**. Apex is served by [`aer`](https://github.com/octoberswimmer/aer-dist/) by default (native binary), with Salesforce's Java-based Apex Language Server (`apex-jorje-lsp.jar`) available as an opt-in backend (`lsp.apex-lsp.settings.backend = "jorje"`).
 
 Current project stage is architecture-first:
 
@@ -17,7 +17,7 @@ Deliver a minimal but functional Salesforce DX experience in Zed:
 
 1. Salesforce DX file recognition (current MVP: `.cls`, `.trigger`, `.apex`, `.soql`, `.sosl`, `.sflog`/`.log`)
 2. Baseline syntax highlighting (especially comment vs code distinction)
-3. Apex LSP process starts successfully through Java for Apex files
+3. Apex LSP process starts successfully for Apex files (native `aer` by default; Java-launched jorje when opted in)
 4. Basic LSP functionality works (diagnostics/completion at minimum where supported by the active backend)
 
 ## Core References
@@ -57,7 +57,15 @@ When code implementation begins, contributors should generally work toward:
 - `languages/soql|sosl|sflog/*` baseline language metadata/highlighting
 - jar sourcing strategy (managed download from a pinned upstream URL with cached SHA-256 verification)
 
-## Java + Jar Runtime Expectations
+## Apex LSP Backend Runtime Expectations
+
+Default backend (`aer`):
+
+- Resolution order: `lsp.apex-lsp.binary.path` -> `lsp.apex-lsp.settings.aer_path` -> `worktree.which("aer")`.
+- No JVM dependency; the binary is launched directly with `aer lsp [--path ...]` and source paths are auto-discovered from `sfdx-project.json` `packageDirectories`.
+- Fail with an actionable error pointing users at `aer_path` or installation when no `aer` is found.
+
+Opt-in backend (`jorje`, selected via `lsp.apex-lsp.settings.backend = "jorje"`):
 
 - Java major version must be >= 11 (recommend 21).
 - Java resolution order should be: extension setting -> `JDK_HOME` -> `JAVA_HOME`.

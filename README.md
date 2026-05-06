@@ -1,6 +1,6 @@
 # zed-salesforce-extension
 
-Salesforce DX language support for the Zed editor. The current implementation uses Salesforce's Apex Language Server (`apex-jorje-lsp.jar`) for Apex while the extension scope covers additional Salesforce languages (SOQL/SOSL/logs today, LWC/Aura/Visualforce next).
+Salesforce DX language support for the Zed editor. Apex is backed by [`aer`](https://github.com/octoberswimmer/aer-dist/) (default) or Salesforce's Java-based Apex Language Server (`apex-jorje-lsp.jar`, opt-in). The extension scope covers additional Salesforce languages (SOQL/SOSL/logs today, LWC/Aura/Visualforce next).
 
 ## Project Goal
 
@@ -32,16 +32,35 @@ Primary references for this architecture:
 - Language Server Protocol (LSP) specification:
   https://github.com/microsoft/language-server-protocol
 
+## Apex LSP backends
+
+The extension supports two Apex language server backends, selectable via `lsp.apex-lsp.settings.backend`:
+
+- `aer` (default) — [`aer`](https://github.com/octoberswimmer/aer-dist/) is a fast, modern, native Apex language server distributed as a single binary. No JVM required. Source paths are auto-discovered from `sfdx-project.json` `packageDirectories`.
+- `jorje` — Salesforce's official Java-based `apex-jorje-lsp.jar` (downloaded and cached on first launch). Requires a Java 11+ runtime on the system.
+
+To opt into jorje, set:
+
+```json
+{
+  "lsp": {
+    "apex-lsp": {
+      "settings": { "backend": "jorje" }
+    }
+  }
+}
+```
+
 ## What We Learn from Existing Salesforce Implementation
 
-From `languageServer.ts`, Salesforce VS Code extension starts the language server as:
+The legacy reference for the jorje backend comes from Salesforce's VS Code extension. From `languageServer.ts`, Salesforce VS Code extension starts the language server as:
 
 - Java command from discovered JDK/JRE home (`<java_home>/bin/java`).
 - Classpath set to `apex-jorje-lsp.jar`.
 - Main class: `apex.jorje.lsp.ApexLanguageServerLauncher`.
 - Additional JVM flags for diagnostics/telemetry/debug features.
 
-That means this project should treat **`apex-jorje-lsp.jar` as the authoritative LSP server binary payload**, launched as a Java process.
+That means when the jorje backend is selected, this project treats **`apex-jorje-lsp.jar` as the authoritative LSP server binary payload**, launched as a Java process.
 
 From `requirements.ts` + Salesforce Java setup docs:
 
@@ -195,26 +214,25 @@ In `extension.toml`:
 In Rust extension code (`src/lib.rs`):
 
 - Implement `language_server_command(...) -> zed::Command`.
-- Launch Java process similarly to Salesforce:
+- Branch on the configured backend (`aer` default, `jorje` opt-in).
+- For `aer`: resolve the binary via `lsp.apex-lsp.binary.path` → `lsp.apex-lsp.settings.aer_path` → `worktree.which("aer")`, then launch with `aer lsp [--path <pkg-dir>]...`.
+- For `jorje`: launch a Java process similarly to Salesforce VS Code:
   - `command`: resolved Java executable path
   - `args`: `-cp <path-to-jar> apex.jorje.lsp.ApexLanguageServerLauncher`
   - plus safe JVM args (`-Xmx` optional for memory control)
 - Set environment variables if needed.
-- Apex LSP is launched directly via Java; the extension does not require Python or rewrite LSP
-  initialize traffic.
 
-## 5) Current Apex jar sourcing (decision)
+## 5) Apex jar sourcing (jorje backend only)
 
-For this project, the extension runtime **downloads and caches the jar on first use** inside the
-extension work directory.
+When the jorje backend is selected, the extension runtime **downloads and caches the jar on first use** inside the extension work directory.
 
 - Canonical runtime source: the pinned upstream jar URL from `forcedotcom/salesforcedx-vscode`
 - Cached runtime jar path: `<extension-workdir>/lsp/apex-lsp/apex-jorje-lsp.jar`
 - The local smoke test (`scripts/test-lsp-launch.sh`) downloads the same jar into `.cache/apex-lsp/` (gitignored) and verifies its SHA-256 before each run
 
-## 6) Java runtime acquisition strategy
+## 6) Java runtime acquisition strategy (jorje backend only)
 
-Required capability in extension logic:
+Only relevant when `backend` is set to `jorje`. Required capability in extension logic:
 
 - Prefer explicit Zed LSP setting for this server (e.g. `lsp.apex-lsp.binary.path` pointing to a `java` executable).
 - Support explicit Java home via `lsp.apex-lsp.settings.java_home` (resolved as `<java_home>/bin/java`).
@@ -239,13 +257,14 @@ Default Apex LSP JVM properties:
 - `-Dlwc.typegeneration.disabled=true`
 - advanced override: `lsp.apex-lsp.binary.arguments` with explicit `-D...` for the same property name (takes precedence)
 
-Example `.zed/settings.json`:
+Example `.zed/settings.json` (jorje backend):
 
 ```json
 {
   "lsp": {
     "apex-lsp": {
       "settings": {
+        "backend": "jorje",
         "java_home": "/Library/Java/JavaVirtualMachines/temurin-21.jdk/Contents/Home",
         "java_max_heap_mb": 2048
       }
@@ -254,7 +273,21 @@ Example `.zed/settings.json`:
 }
 ```
 
-Recommended docs for users should include Java 21 guidance (consistent with Salesforce recommendations).
+Recommended docs for users on the jorje backend should include Java 21 guidance (consistent with Salesforce recommendations).
+
+Example `.zed/settings.json` (aer backend, default — only needed if `aer` is not on `PATH`):
+
+```json
+{
+  "lsp": {
+    "apex-lsp": {
+      "settings": {
+        "aer_path": "/usr/local/bin/aer"
+      }
+    }
+  }
+}
+```
 
 ## 7) Workspace assumptions and limitations
 
@@ -393,7 +426,7 @@ How to verify:
 
 1. Resolves Java path (setting/env simulation).
 2. Downloads the pinned Apex LSP jar into `.cache/apex-lsp/` if missing and validates its SHA-256 checksum.
-3. Runs short-lived Apex LSP launch smoke tests (current backend):
+3. Runs short-lived Apex LSP launch smoke tests (jorje backend):
    - start the process
    - perform a minimal LSP handshake over stdio
    - open a fixture trigger file and request completion at `System.`
@@ -446,9 +479,9 @@ Even if full GUI assertion is hard, log-based validation is practical for agents
 
 ## Architecture Decisions (Current)
 
-- Current LSP engine (Apex): Salesforce `apex-jorje-lsp.jar`.
-- Runtime: Java (11+ required, Java 21 recommended).
-- Editor integration: Zed extension with Rust `language_server_command` launcher and managed Apex jar download/cache.
+- Default Apex LSP engine: [`aer`](https://github.com/octoberswimmer/aer-dist/) (native binary, no JVM).
+- Opt-in alternative: Salesforce `apex-jorje-lsp.jar` (selected via `backend = "jorje"`); requires Java 11+ (Java 21 recommended).
+- Editor integration: Zed extension with Rust `language_server_command` launcher; jorje backend additionally manages jar download/cache.
 - Highlighting baseline: Tree-sitter (`highlights.scm`), semantic tokens optional enhancement.
 - MVP goal: reliable startup + baseline coding ergonomics across Salesforce DX languages before advanced features.
 
