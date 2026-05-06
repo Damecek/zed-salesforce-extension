@@ -162,7 +162,7 @@ fn build_aer_command(
     worktree: &zed::Worktree,
 ) -> zed::Result<zed::Command> {
     let aer_path = resolve_aer_binary(lsp_settings, worktree)?;
-    let source_args = resolve_aer_source_args(lsp_settings, worktree);
+    let source_args = resolve_aer_source_args(lsp_settings, worktree)?;
     let mut args = vec!["lsp".to_string()];
     args.extend(source_args);
     Ok(zed::Command {
@@ -175,7 +175,7 @@ fn build_aer_command(
 fn resolve_aer_source_args(
     lsp_settings: &zed::settings::LspSettings,
     worktree: &zed::Worktree,
-) -> Vec<String> {
+) -> zed::Result<Vec<String>> {
     // Priority 1: explicit user override via settings.aer_source_paths (JSON array)
     if let Some(paths) = setting_value(lsp_settings, "aer_source_paths").and_then(|v| v.as_array())
     {
@@ -187,17 +187,29 @@ fn resolve_aer_source_args(
             .flat_map(|p| ["--path".to_string(), p])
             .collect();
         if !explicit.is_empty() {
-            return explicit;
+            return Ok(explicit);
         }
     }
     // Priority 2: autodiscover from sfdx-project.json
-    aer_source_args_from_sfdx(worktree).unwrap_or_default()
+    aer_source_args_from_sfdx(worktree)
 }
 
-fn aer_source_args_from_sfdx(worktree: &zed::Worktree) -> Option<Vec<String>> {
-    let json = worktree.read_text_file("sfdx-project.json").ok()?;
-    let root: serde_json::Value = serde_json::from_str(&json).ok()?;
-    let dirs = root.get("packageDirectories")?.as_array()?;
+fn aer_source_args_from_sfdx(worktree: &zed::Worktree) -> zed::Result<Vec<String>> {
+    // Missing sfdx-project.json is fine — extension still serves Apex highlighting
+    // and a single-file LSP session. Only surface an error when the file exists
+    // but is malformed enough that we can't trust autodiscovery.
+    let Ok(json) = worktree.read_text_file("sfdx-project.json") else {
+        return Ok(Vec::new());
+    };
+    let root: serde_json::Value = serde_json::from_str(&json).map_err(|err| {
+        format!(
+            "sfdx-project.json at the worktree root is not valid JSON: {err}. \
+             Fix the file or override package paths via lsp.apex-lsp.settings.aer_source_paths."
+        )
+    })?;
+    let Some(dirs) = root.get("packageDirectories").and_then(|v| v.as_array()) else {
+        return Ok(Vec::new());
+    };
     let root_path = worktree.root_path();
     let args: Vec<String> = dirs
         .iter()
@@ -209,11 +221,7 @@ fn aer_source_args_from_sfdx(worktree: &zed::Worktree) -> Option<Vec<String>> {
             ["--path".to_string(), abs]
         })
         .collect();
-    if args.is_empty() {
-        None
-    } else {
-        Some(args)
-    }
+    Ok(args)
 }
 
 fn resolve_aer_binary(
