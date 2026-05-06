@@ -6,6 +6,12 @@ authors = ["zed-salesforce-extension contributors"]
 description = "Salesforce DX language support for Zed (Apex LSP via aer; jorje opt-in)."
 repository = "https://github.com/Damecek/zed-salesforce-extension"
 
+snippets = [
+    "snippets/apex.json",
+    "snippets/soql.json",
+    "snippets/sosl.json",
+]
+
 [language_servers.apex-lsp]
 name = "Apex Language Server"
 languages = ["Apex"]

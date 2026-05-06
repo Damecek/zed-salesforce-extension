@@ -1,0 +1,19 @@
+{
+  "Find returning multiple sobjects": {
+    "prefix": "find",
+    "body": [
+      "FIND {${1:search term}} IN ${2:ALL FIELDS} RETURNING",
+      "    Account(Id, Name),",
+      "    Contact(Id, Name, Email)"
+    ],
+    "description": "SOSL FIND ... RETURNING multiple sobjects"
+  },
+  "Find scoped to one object": {
+    "prefix": "findone",
+    "body": [
+      "FIND {${1:search term}} IN ${2:NAME FIELDS} RETURNING",
+      "    ${3:Account}(Id, Name WHERE ${4:condition} ORDER BY Name LIMIT ${5:50})"
+    ],
+    "description": "SOSL FIND scoped to one sobject with WHERE/ORDER/LIMIT"
+  }
+}

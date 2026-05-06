@@ -1,0 +1,182 @@
+{
+  "Test class scaffold": {
+    "prefix": "testclass",
+    "body": [
+      "@IsTest",
+      "private class ${1:ClassName}Test {",
+      "    @IsTest",
+      "    static void ${2:methodUnderTest}_${3:scenario}_${4:expected}() {",
+      "        // Arrange",
+      "        $0",
+      "",
+      "        // Act",
+      "        Test.startTest();",
+      "        ",
+      "        Test.stopTest();",
+      "",
+      "        // Assert",
+      "        ",
+      "    }",
+      "}"
+    ],
+    "description": "Apex test class with one Arrange/Act/Assert method"
+  },
+  "Test method": {
+    "prefix": "testmethod",
+    "body": [
+      "@IsTest",
+      "static void ${1:methodUnderTest}_${2:scenario}_${3:expected}() {",
+      "    // Arrange",
+      "    $0",
+      "",
+      "    // Act",
+      "    Test.startTest();",
+      "    ",
+      "    Test.stopTest();",
+      "",
+      "    // Assert",
+      "    ",
+      "}"
+    ],
+    "description": "@IsTest method with start/stopTest"
+  },
+  "Test.startTest / Test.stopTest": {
+    "prefix": "startstop",
+    "body": [
+      "Test.startTest();",
+      "$0",
+      "Test.stopTest();"
+    ],
+    "description": "Wrap code in startTest/stopTest"
+  },
+  "System.runAs": {
+    "prefix": "runas",
+    "body": [
+      "System.runAs(${1:user}) {",
+      "    $0",
+      "}"
+    ],
+    "description": "Run code under another user's context"
+  },
+  "SOQL for-loop": {
+    "prefix": "forsoql",
+    "body": [
+      "for (${1:SObject} ${2:record} : [SELECT ${3:Id} FROM ${1:SObject} WHERE ${4:condition}]) {",
+      "    $0",
+      "}"
+    ],
+    "description": "for-each loop over a SOQL query"
+  },
+  "Inline SOQL select": {
+    "prefix": "soql",
+    "body": [
+      "List<${1:SObject}> ${2:records} = [SELECT ${3:Id} FROM ${1:SObject} WHERE ${4:condition}];"
+    ],
+    "description": "Inline SOQL assigned to a typed list"
+  },
+  "Database.SaveResult handling": {
+    "prefix": "dmlinsert",
+    "body": [
+      "Database.SaveResult[] ${1:results} = Database.insert(${2:records}, ${3:false});",
+      "for (Database.SaveResult sr : ${1:results}) {",
+      "    if (!sr.isSuccess()) {",
+      "        for (Database.Error err : sr.getErrors()) {",
+      "            System.debug(LoggingLevel.ERROR, err.getStatusCode() + ': ' + err.getMessage());",
+      "        }",
+      "    }",
+      "}"
+    ],
+    "description": "Database.insert with allOrNone and per-error logging"
+  },
+  "Savepoint / rollback": {
+    "prefix": "savepoint",
+    "body": [
+      "Savepoint ${1:sp} = Database.setSavepoint();",
+      "try {",
+      "    $0",
+      "} catch (Exception e) {",
+      "    Database.rollback(${1:sp});",
+      "    throw e;",
+      "}"
+    ],
+    "description": "Transactional savepoint/rollback pattern"
+  },
+  "HTTP callout": {
+    "prefix": "httpcallout",
+    "body": [
+      "HttpRequest req = new HttpRequest();",
+      "req.setEndpoint('${1:https://example.com}');",
+      "req.setMethod('${2:GET}');",
+      "req.setHeader('Content-Type', 'application/json');",
+      "${3:req.setBody(JSON.serialize(${4:payload}));}",
+      "Http http = new Http();",
+      "HttpResponse res = http.send(req);",
+      "if (res.getStatusCode() == 200) {",
+      "    $0",
+      "}"
+    ],
+    "description": "Apex HTTP callout with JSON body"
+  },
+  "Trigger handler dispatch": {
+    "prefix": "triggerbody",
+    "body": [
+      "if (Trigger.isBefore) {",
+      "    if (Trigger.isInsert) {",
+      "        ${1:Handler}.beforeInsert(Trigger.new);",
+      "    } else if (Trigger.isUpdate) {",
+      "        ${1:Handler}.beforeUpdate(Trigger.new, Trigger.oldMap);",
+      "    } else if (Trigger.isDelete) {",
+      "        ${1:Handler}.beforeDelete(Trigger.old);",
+      "    }",
+      "} else {",
+      "    if (Trigger.isInsert) {",
+      "        ${1:Handler}.afterInsert(Trigger.new);",
+      "    } else if (Trigger.isUpdate) {",
+      "        ${1:Handler}.afterUpdate(Trigger.new, Trigger.oldMap);",
+      "    } else if (Trigger.isDelete) {",
+      "        ${1:Handler}.afterDelete(Trigger.old);",
+      "    } else if (Trigger.isUndelete) {",
+      "        ${1:Handler}.afterUndelete(Trigger.new);",
+      "    }",
+      "}",
+      "$0"
+    ],
+    "description": "Standard trigger context dispatch"
+  },
+  "Assert equal": {
+    "prefix": "assertequal",
+    "body": [
+      "Assert.areEqual(${1:expected}, ${2:actual}, '${3:message}');"
+    ],
+    "description": "Assert.areEqual with message"
+  },
+  "Queueable scaffold": {
+    "prefix": "queueable",
+    "body": [
+      "public with sharing class ${1:ClassName} implements Queueable${2:, Database.AllowsCallouts} {",
+      "    public void execute(QueueableContext context) {",
+      "        $0",
+      "    }",
+      "}"
+    ],
+    "description": "Queueable Apex class scaffold"
+  },
+  "Batchable scaffold": {
+    "prefix": "batchable",
+    "body": [
+      "public with sharing class ${1:ClassName} implements Database.Batchable<${2:SObject}>${3:, Database.Stateful} {",
+      "    public Database.QueryLocator start(Database.BatchableContext bc) {",
+      "        return Database.getQueryLocator('${4:SELECT Id FROM Account}');",
+      "    }",
+      "",
+      "    public void execute(Database.BatchableContext bc, List<${2:SObject}> scope) {",
+      "        $0",
+      "    }",
+      "",
+      "    public void finish(Database.BatchableContext bc) {",
+      "    }",
+      "}"
+    ],
+    "description": "Database.Batchable scaffold"
+  }
+}

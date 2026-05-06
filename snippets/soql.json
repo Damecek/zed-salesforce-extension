@@ -1,0 +1,51 @@
+{
+  "Select all common fields": {
+    "prefix": "select",
+    "body": [
+      "SELECT Id, Name${2:, CreatedDate, LastModifiedDate}",
+      "FROM ${1:SObject}",
+      "WHERE ${3:condition}",
+      "${4:LIMIT 200}"
+    ],
+    "description": "SOQL SELECT with WHERE and optional LIMIT"
+  },
+  "Aggregate query": {
+    "prefix": "groupby",
+    "body": [
+      "SELECT ${2:OwnerId}, COUNT(Id) total",
+      "FROM ${1:SObject}",
+      "WHERE ${3:condition}",
+      "GROUP BY ${2:OwnerId}",
+      "${4:HAVING COUNT(Id) > 0}"
+    ],
+    "description": "SOQL aggregate with GROUP BY"
+  },
+  "Parent-child relationship query": {
+    "prefix": "parentchild",
+    "body": [
+      "SELECT Id, Name, (SELECT Id, ${3:Name} FROM ${2:Contacts})",
+      "FROM ${1:Account}",
+      "WHERE ${4:condition}"
+    ],
+    "description": "SOQL with subquery on child relationship"
+  },
+  "Lookup with relationship": {
+    "prefix": "lookup",
+    "body": [
+      "SELECT Id, Name, ${2:Account}.${3:Name}",
+      "FROM ${1:Contact}",
+      "WHERE ${4:condition}"
+    ],
+    "description": "SOQL traversing a parent lookup field"
+  },
+  "Order by limit": {
+    "prefix": "orderlimit",
+    "body": [
+      "SELECT Id, ${2:Name}",
+      "FROM ${1:SObject}",
+      "ORDER BY ${3:CreatedDate DESC}",
+      "LIMIT ${4:50}"
+    ],
+    "description": "SOQL ORDER BY with LIMIT"
+  }
+}
