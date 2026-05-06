@@ -51,6 +51,59 @@ To opt into jorje, set:
 }
 ```
 
+## Apex formatting with Prettier
+
+The Apex language declaration sets `prettier_parser_name = "apex"`, so Zed's
+built-in Prettier picks up the right parser. Users still need to enable
+Prettier and provide [`prettier-plugin-apex`](https://github.com/dangmai/prettier-plugin-apex).
+
+Recommended `.zed/settings.json` for an SFDX project:
+
+```json
+{
+  "languages": {
+    "Apex": {
+      "format_on_save": "on",
+      "formatter": "prettier",
+      "prettier": {
+        "allowed": true,
+        "parser": "apex",
+        "plugins": ["prettier-plugin-apex"]
+      }
+    }
+  }
+}
+```
+
+If the project has its own `package.json` / `.prettierrc`, Zed will use the
+project-local Prettier and config (so the `plugins` and `options` keys above
+are ignored, but `allowed` and `parser` still apply). Anonymous Apex blocks
+should use `"parser": "apex-anonymous"`.
+
+Alternative — invoke Prettier as an external formatter (no bundled Prettier
+needed, calls `npx`):
+
+```json
+{
+  "languages": {
+    "Apex": {
+      "format_on_save": "on",
+      "formatter": {
+        "external": {
+          "command": "npx",
+          "arguments": [
+            "prettier",
+            "--plugin=prettier-plugin-apex",
+            "--parser", "apex",
+            "--stdin-filepath", "{buffer_path}"
+          ]
+        }
+      }
+    }
+  }
+}
+```
+
 ## What We Learn from Existing Salesforce Implementation
 
 The legacy reference for the jorje backend comes from Salesforce's VS Code extension. From `languageServer.ts`, Salesforce VS Code extension starts the language server as:
