@@ -14,10 +14,15 @@ snippets = [
 
 [language_servers.apex-lsp]
 name = "Apex Language Server"
-languages = ["Apex"]
+# SOQL is wired to apex-lsp because aer (the default backend) ships SOQL
+# diagnostics, hover, and field validation against the local schema
+# (see aer release notes v0.0.101 / v0.0.113). The jorje backend ignores
+# SOQL buffers — that is intentional; users on jorje see only highlights.
+languages = ["Apex", "SOQL"]
 
 [language_servers.apex-lsp.language_ids]
 "Apex" = "apex"
+"SOQL" = "soql"
 
 [grammars.apex]
 repository = "https://github.com/aheber/tree-sitter-sfapex"
