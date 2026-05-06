@@ -59,6 +59,26 @@ impl zed::Extension for SalesforceExtension {
             }
         }
     }
+
+    fn language_server_initialization_options(
+        &mut self,
+        language_server_id: &zed::LanguageServerId,
+        worktree: &zed::Worktree,
+    ) -> zed::Result<Option<serde_json::Value>> {
+        if language_server_id.as_ref() != APEX_LSP_ID {
+            return Ok(None);
+        }
+        let lsp_settings =
+            zed::settings::LspSettings::for_worktree(APEX_LSP_ID, worktree).unwrap_or_default();
+        match resolve_backend(&lsp_settings) {
+            ApexLspBackend::Jorje => Ok(Some(serde_json::json!({
+                "enableSynchronizedInitJobs": true,
+                "enableSemanticErrors": false,
+                "enableCompletionStatistics": false,
+            }))),
+            ApexLspBackend::Aer => Ok(None),
+        }
+    }
 }
 
 zed::register_extension!(SalesforceExtension);
