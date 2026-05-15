@@ -114,6 +114,25 @@
     "hide": "never"
   },
   {
+    "label": "sf: project retrieve start (current file)",
+    "command": "sf",
+    "args": ["project", "retrieve", "start", "--ignore-conflicts", "--source-dir", "$ZED_FILE"],
+    "cwd": "$ZED_WORKTREE_ROOT",
+    "allow_concurrent_runs": false,
+    "reveal": "always",
+    "hide": "never"
+  },
+  {
+    "label": "sf: project retrieve start (current file, pick org)",
+    "command": "printf 'Target org alias (blank=default): ' && read ORG; sf project retrieve start --ignore-conflicts --source-dir \"$ZED_FILE\" ${ORG:+--target-org} ${ORG:+\"$ORG\"}",
+    "cwd": "$ZED_WORKTREE_ROOT",
+    "allow_concurrent_runs": false,
+    "use_new_terminal": true,
+    "show_command": false,
+    "reveal": "always",
+    "hide": "never"
+  },
+  {
     "label": "sf: project retrieve preview",
     "command": "sf",
     "args": ["project", "retrieve", "preview"],
