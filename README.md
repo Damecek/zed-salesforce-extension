@@ -268,7 +268,7 @@ In Rust extension code (`src/lib.rs`):
 
 - Implement `language_server_command(...) -> zed::Command`.
 - Branch on the configured backend (`aer` default, `jorje` opt-in).
-- For `aer`: resolve the binary via `lsp.apex-lsp.binary.path` → `lsp.apex-lsp.settings.aer_path` → `worktree.which("aer")`, then launch with `aer lsp [--path <pkg-dir>]...`.
+- For `aer`: resolve the binary via `lsp.apex-lsp.binary.path` → `lsp.apex-lsp.settings.aer_path` → `worktree.which("aer")`, then launch with `aer lsp [<source-root>]...`.
 - For `jorje`: launch a Java process similarly to Salesforce VS Code:
   - `command`: resolved Java executable path
   - `args`: `-cp <path-to-jar> apex.jorje.lsp.ApexLanguageServerLauncher`
@@ -342,6 +342,25 @@ Example `.zed/settings.json` (aer backend, default — only needed if `aer` is n
 }
 ```
 
+By default, the aer backend reads `sfdx-project.json` `packageDirectories` and passes those package roots to `aer lsp` as positional source roots. Salesforce documents package directory paths as project-relative package roots, with source-format metadata below the package directory. Salesforce's generated project layout commonly places Apex and adjacent metadata under:
+
+- `<package>/main/default/classes`
+- `<package>/main/default/triggers`
+- `<package>/main/default/objects`
+- `<package>/main/default/externalServices`
+
+Do not narrow `aer` inputs to Apex leaf folders such as `classes` or `triggers`. `aer` builds schema information by scanning metadata in the directories it receives; passing only `classes` can hide custom objects, fields, external services, flows, and other metadata that Apex type checking and completions may need. Passing the package root keeps custom source subtrees such as `<package>/second/default/classes` or `<package>/main/second/triggers` available without the extension guessing the user's internal layout.
+
+References:
+
+- [Salesforce DX project configuration](https://developer.salesforce.com/docs/atlas.en-us.sfdx_dev.meta/sfdx_dev/sfdx_dev_ws_config.htm): `packageDirectories[].path` is relative to the project.
+- [Salesforce source format](https://developer.salesforce.com/docs/platform/sfvscode-extensions/guide/source-format.html): examples use `force-app/main/default`; this extension treats that as the generated convention, not the only source subtree.
+- [aer Getting Started](https://www.octoberswimmer.com/tools/aer/getting-started/): `aer test` examples pass source roots such as `force-app/main/default` and note that schema is built by scanning metadata in supplied directories.
+- [aer server docs](https://www.octoberswimmer.com/tools/aer/docs/aer_server/): source paths can include Apex classes, triggers, flows, and object metadata; loaded External Service Registrations can provide callback routes.
+- Metadata API: [Apex classes](https://developer.salesforce.com/docs/atlas.en-us.api_meta.meta/api_meta/meta_classes.htm) are stored in `classes`; [Apex triggers](https://developer.salesforce.com/docs/atlas.en-us.api_meta.meta/api_meta/meta_triggers.htm) are stored in `triggers`.
+
+For unusual workspaces, set `lsp.apex-lsp.settings.aer_source_paths` explicitly to source roots containing Apex and adjacent metadata.
+
 ## 7) Workspace assumptions and limitations
 
 Salesforce DX language tooling behavior depends on project shape (`sfdx-project.json`, `packageDirectories`, and Salesforce DX metadata layout). For MVP, we need to be explicit about what we do (and do not) support so startup is deterministic.
@@ -389,15 +408,18 @@ If unsupported workspace is opened, extension should degrade gracefully:
 - Org-dependent features (auth files, namespace from org, etc.) are out of scope. The VS Code implementation uses the Salesforce Core extension to derive org namespace and other context; we will not replicate that during MVP.
 - Restricted worktrees: the MVP should not start any external process (including Java) until the worktree is trusted, aligning with Zed’s supply-chain safety posture.
 
-### `sfdx-project.json` parsing (future work)
+### `sfdx-project.json` parsing
 
-The current MVP does not parse `sfdx-project.json` in extension runtime code yet.
+The current MVP performs minimal runtime parsing of `sfdx-project.json` for the default `aer` backend.
 
-When this is implemented, the intended minimal surface is:
+Implemented surface:
 
-- `packageDirectories`: determine which folder roots constitute Salesforce DX source packages. This is used for:
-  - validation and error messages (e.g. warn when a `.cls` is outside any package directory)
-  - future: limit file watching/index scope if needed
+- `packageDirectories`: determine source package roots passed to `aer lsp`.
+
+Future surface:
+
+- validation and error messages (e.g. warn when a `.cls` is outside any package directory)
+- future: limit file watching/index scope if needed
 - `namespace`: used only for user-facing messaging and (future) LSP UX parity behaviors; we do not assume org namespace access in MVP.
 - `sourceApiVersion`: used for compatibility decisions that depend on API version (future). For MVP it is optional and can be logged for diagnostics.
 

@@ -184,7 +184,6 @@ fn resolve_aer_source_args(
             .filter_map(|v| v.as_str())
             .map(|s| s.trim().to_string())
             .filter(|s| !s.is_empty())
-            .flat_map(|p| ["--path".to_string(), p])
             .collect();
         if !explicit.is_empty() {
             return Ok(explicit);
@@ -216,10 +215,7 @@ fn aer_source_args_from_sfdx(worktree: &zed::Worktree) -> zed::Result<Vec<String
         .filter_map(|d| d.get("path")?.as_str())
         .map(|p| p.trim().to_string())
         .filter(|p| !p.is_empty())
-        .flat_map(|p| {
-            let abs = normalize_source_path(&root_path, &p);
-            ["--path".to_string(), abs]
-        })
+        .map(|p| normalize_source_path(&root_path, &p))
         .collect();
     Ok(args)
 }
