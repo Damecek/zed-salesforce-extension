@@ -1,0 +1,3 @@
+SELECT Id, Name
+FROM Order__c
+WHERE FORMULA('Revenue__c - Cost__c') > 250

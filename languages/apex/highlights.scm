@@ -13,7 +13,10 @@
 ; Literals
 ;------------------------------------------------------------------------------
 
-(string_literal) @string
+[
+  (string_literal)
+  (multi_line_string_literal)
+] @string
 
 [
   (int)
@@ -340,7 +343,7 @@
 (annotation
   "@" @punctuation.special
   name: (identifier) @keyword
-  (#match? @keyword "(?i)^(AuraEnabled|Deprecated|Future|InvocableMethod|InvocableVariable|IsTest|JsonAccess|NamespaceAccessible|ReadOnly|RemoteAction|SuppressWarnings|TestSetup|TestVisible|RestResource|HttpDelete|HttpGet|HttpPatch|HttpPost|HttpPut)$"))
+  (#match? @keyword "(?i)^(AuraEnabled|Deprecated|Future|IntegrationTest|InvocableMethod|InvocableVariable|IsTest|JsonAccess|NamespaceAccessible|ReadOnly|RemoteAction|SuppressWarnings|TearDown|TestSetup|TestVisible|RestResource|HttpDelete|HttpGet|HttpPatch|HttpPost|HttpPut)$"))
 
 (annotation_key_value
   (identifier) @property)

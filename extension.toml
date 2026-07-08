@@ -26,21 +26,21 @@ languages = ["Apex", "SOQL"]
 
 [grammars.apex]
 repository = "https://github.com/aheber/tree-sitter-sfapex"
-rev = "3597575a429766dd7ecce9f5bb97f6fec4419d5d"
+rev = "60cc57049ed6dd4e28e528024a0230ee8fb8a64d"
 # tree-sitter-sfapex is a multi-grammar repo; Apex grammar lives in the `apex/` subdir.
 path = "apex"
 
 [grammars.soql]
 repository = "https://github.com/aheber/tree-sitter-sfapex"
-rev = "3597575a429766dd7ecce9f5bb97f6fec4419d5d"
+rev = "60cc57049ed6dd4e28e528024a0230ee8fb8a64d"
 path = "soql"
 
 [grammars.sosl]
 repository = "https://github.com/aheber/tree-sitter-sfapex"
-rev = "3597575a429766dd7ecce9f5bb97f6fec4419d5d"
+rev = "60cc57049ed6dd4e28e528024a0230ee8fb8a64d"
 path = "sosl"
 
 [grammars.sflog]
 repository = "https://github.com/aheber/tree-sitter-sfapex"
-rev = "3597575a429766dd7ecce9f5bb97f6fec4419d5d"
+rev = "60cc57049ed6dd4e28e528024a0230ee8fb8a64d"
 path = "sflog"

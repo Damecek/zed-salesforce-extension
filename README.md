@@ -159,7 +159,7 @@ This gives Apex file association + comment behavior and is required before deepe
 This extension uses the `tree-sitter-sfapex` grammar repository, pinned to a specific Git revision for deterministic builds:
 
 - Repository: `https://github.com/aheber/tree-sitter-sfapex`
-- Pinned commit (rev): `3597575a429766dd7ecce9f5bb97f6fec4419d5d`
+- Pinned commit (rev): `60cc57049ed6dd4e28e528024a0230ee8fb8a64d`
 
 Zed loads Tree-sitter grammars that are registered in `extension.toml`. Apex is one registered language in a broader Salesforce DX extension.
 
@@ -167,7 +167,7 @@ Zed loads Tree-sitter grammars that are registered in `extension.toml`. Apex is 
 # extension.toml
 [grammars.apex]
 repository = "https://github.com/aheber/tree-sitter-sfapex"
-rev = "3597575a429766dd7ecce9f5bb97f6fec4419d5d"
+rev = "60cc57049ed6dd4e28e528024a0230ee8fb8a64d"
 ```
 
 `tree-sitter-sfapex` is a multi-grammar repository (it includes `apex`, `soql`, `sosl`, and `sflog` via `tree-sitter.json`).
@@ -177,15 +177,15 @@ If we decide to support these file types in Zed later, register them explicitly 
 # extension.toml
 [grammars.soql]
 repository = "https://github.com/aheber/tree-sitter-sfapex"
-rev = "3597575a429766dd7ecce9f5bb97f6fec4419d5d"
+rev = "60cc57049ed6dd4e28e528024a0230ee8fb8a64d"
 
 [grammars.sosl]
 repository = "https://github.com/aheber/tree-sitter-sfapex"
-rev = "3597575a429766dd7ecce9f5bb97f6fec4419d5d"
+rev = "60cc57049ed6dd4e28e528024a0230ee8fb8a64d"
 
 [grammars.sflog]
 repository = "https://github.com/aheber/tree-sitter-sfapex"
-rev = "3597575a429766dd7ecce9f5bb97f6fec4419d5d"
+rev = "60cc57049ed6dd4e28e528024a0230ee8fb8a64d"
 ```
 
 Upstream file type mapping (from `tree-sitter.json`) is:
@@ -409,7 +409,7 @@ If this parsing is added later and parsing fails (invalid JSON), the extension s
 What changed:
 
 - Added a minimal Zed extension scaffold (`extension.toml`, `Cargo.toml`, `src/lib.rs`).
-- Registered the Apex Tree-sitter grammar in `extension.toml` pinned to `tree-sitter-sfapex` commit `3597575a429766dd7ecce9f5bb97f6fec4419d5d`.
+- Registered the Apex Tree-sitter grammar in `extension.toml` pinned to `tree-sitter-sfapex` commit `60cc57049ed6dd4e28e528024a0230ee8fb8a64d`.
 - Added Apex language configuration in `languages/apex/config.toml` with file suffixes `.cls`, `.trigger`, and `.apex`.
 - Added baseline syntax highlighting query in `languages/apex/highlights.scm` sourced from upstream pinned grammar revision.
 - Registered SOQL/SOSL/Salesforce Log grammars and added language configs + highlights for `.soql`, `.sosl`, and `.sflog` (and `.log`) as part of broader Salesforce DX language support.
@@ -428,9 +428,10 @@ Why:
 How to verify:
 
 1. Run `cargo check` to validate Rust extension scaffold builds.
-2. Run `./scripts/test-lsp-launch.sh` to verify Java resolution, download/cache the pinned Apex LSP jar (with SHA-256 check), and exercise Apex LSP completion against both a fixture SFDX workspace root and a nested SFDX workspace inside a monorepo-style root.
-3. Install as a dev extension in Zed and open `.cls` / `.trigger` / `.apex` files.
-4. Confirm Apex mode is selected, comments/keywords/strings are highlighted, and Apex LSP starts when opening an SFDX project root. On first launch the extension should download the jar into its work directory, then reuse the cached copy on later launches. Optionally also verify the currently tested nested monorepo scenario.
+2. Run `./scripts/tree-sitter-smoke.py` to verify the pinned Tree-sitter grammar parses current Apex fixtures and that local highlight queries compile against them.
+3. Run `./scripts/test-lsp-launch.sh` to verify Java resolution, download/cache the pinned Apex LSP jar (with SHA-256 check), and exercise Apex LSP completion against both a fixture SFDX workspace root and a nested SFDX workspace inside a monorepo-style root.
+4. Install as a dev extension in Zed and open `.cls` / `.trigger` / `.apex` files.
+5. Confirm Apex mode is selected, comments/keywords/strings are highlighted, and Apex LSP starts when opening an SFDX project root. On first launch the extension should download the jar into its work directory, then reuse the cached copy on later launches. Optionally also verify the currently tested nested monorepo scenario.
 
 ## MVP Scope (Phase 1)
 
@@ -471,7 +472,12 @@ How to verify:
 
 - Validate TOML files parse (`extension.toml`, `languages/apex/config.toml`).
 - Validate query files syntax (`highlights.scm` etc.) where tooling is available.
+- Run `./scripts/tree-sitter-smoke.py` to clone/cache the pinned `tree-sitter-sfapex` revision and parse Salesforce syntax fixtures. The script includes passing Summer '26 Apex coverage and expected-failure fixtures for known upstream parser gaps.
 - Lint Rust extension code (`cargo check`, `cargo clippy` if configured).
+
+Current known parser gap:
+
+- Summer '26 SOQL `FORMULA('...')` in a `WHERE` clause does not parse cleanly in `tree-sitter-sfapex` as of the pinned revision. Keep `scripts/fixtures/known-gaps/*formula*` as expected failures until the upstream grammar supports this construct, then move them into passing fixtures.
 
 ## B) Deterministic process-level tests
 

@@ -4,7 +4,7 @@
     (modifiers
       (annotation
         name: (identifier) @_ann
-        (#match? @_ann "(?i)^isTest$")))
+        (#match? @_ann "(?i)^(isTest|IntegrationTest)$")))
     name: (identifier) @run)
   (#set! tag apex-test-class)
 )
@@ -29,7 +29,7 @@
         (modifiers
           (annotation
             name: (identifier) @_ann
-            (#match? @_ann "(?i)^isTest$")))
+            (#match? @_ann "(?i)^(isTest|IntegrationTest)$")))
         name: (identifier) @run)))
   (#set! tag apex-test)
 )
