@@ -24,6 +24,17 @@ languages = ["Apex", "SOQL"]
 "Apex" = "apex"
 "SOQL" = "soql"
 
+[language_servers.lwc]
+name = "LWC Language Server"
+# Zed currently registers language servers by language name, not by path glob.
+# This attaches the LWC server to HTML/JavaScript buffers globally; Salesforce
+# workspace scoping is handled by the server itself where possible.
+languages = ["HTML", "JavaScript"]
+
+[language_servers.lwc.language_ids]
+"HTML" = "html"
+"JavaScript" = "javascript"
+
 [grammars.apex]
 repository = "https://github.com/aheber/tree-sitter-sfapex"
 rev = "60cc57049ed6dd4e28e528024a0230ee8fb8a64d"

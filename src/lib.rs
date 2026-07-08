@@ -4,6 +4,9 @@ use zed_extension_api::serde_json;
 use zed_extension_api::{DownloadedFileType, LanguageServerInstallationStatus};
 
 const APEX_LSP_ID: &str = "apex-lsp";
+const LWC_LSP_ID: &str = "lwc";
+const LWC_LSP_PACKAGE_NAME: &str = "@salesforce/lwc-language-server";
+const LWC_LSP_PACKAGE_VERSION: &str = "4.12.13";
 const APEX_LSP_MAIN_CLASS: &str = "apex.jorje.lsp.ApexLanguageServerLauncher";
 const APEX_LSP_JAR_CACHE_REL_PATH: &str = "lsp/apex-lsp/apex-jorje-lsp.jar";
 const APEX_LSP_JAR_DOWNLOAD_URL: &str = "https://raw.githubusercontent.com/forcedotcom/salesforcedx-vscode/67dc27932e0ce43b93abe00878a2f966d0eb16a3/packages/salesforcedx-vscode-apex/jars/apex-jorje-lsp.jar";
@@ -34,29 +37,10 @@ impl zed::Extension for SalesforceExtension {
         language_server_id: &zed::LanguageServerId,
         worktree: &zed::Worktree,
     ) -> zed::Result<zed::Command> {
-        if language_server_id.as_ref() != APEX_LSP_ID {
-            return Err(format!("Unknown language server id: {language_server_id}"));
-        }
-
-        let shell_env = worktree.shell_env();
-        let lsp_settings =
-            zed::settings::LspSettings::for_worktree(APEX_LSP_ID, worktree).unwrap_or_default();
-
-        match resolve_backend(&lsp_settings) {
-            ApexLspBackend::Aer => build_aer_command(&lsp_settings, shell_env, worktree),
-            ApexLspBackend::Jorje => {
-                let jar_path = ensure_apex_lsp_jar(language_server_id)?;
-                let (java_command, mut jvm_args) =
-                    resolve_java_command(&lsp_settings, &shell_env, worktree);
-                jvm_args.push("-cp".to_string());
-                jvm_args.push(jar_path);
-                jvm_args.push(APEX_LSP_MAIN_CLASS.to_string());
-                Ok(zed::Command {
-                    command: java_command,
-                    args: jvm_args,
-                    env: shell_env,
-                })
-            }
+        match language_server_id.as_ref() {
+            APEX_LSP_ID => apex_language_server_command(language_server_id, worktree),
+            LWC_LSP_ID => lwc_language_server_command(language_server_id, worktree),
+            _ => Err(format!("Unknown language server id: {language_server_id}")),
         }
     }
 
@@ -82,6 +66,94 @@ impl zed::Extension for SalesforceExtension {
 }
 
 zed::register_extension!(SalesforceExtension);
+
+fn apex_language_server_command(
+    language_server_id: &zed::LanguageServerId,
+    worktree: &zed::Worktree,
+) -> zed::Result<zed::Command> {
+    let shell_env = worktree.shell_env();
+    let lsp_settings =
+        zed::settings::LspSettings::for_worktree(APEX_LSP_ID, worktree).unwrap_or_default();
+
+    match resolve_backend(&lsp_settings) {
+        ApexLspBackend::Aer => build_aer_command(&lsp_settings, shell_env, worktree),
+        ApexLspBackend::Jorje => {
+            let jar_path = ensure_apex_lsp_jar(language_server_id)?;
+            let (java_command, mut jvm_args) =
+                resolve_java_command(&lsp_settings, &shell_env, worktree);
+            jvm_args.push("-cp".to_string());
+            jvm_args.push(jar_path);
+            jvm_args.push(APEX_LSP_MAIN_CLASS.to_string());
+            Ok(zed::Command {
+                command: java_command,
+                args: jvm_args,
+                env: shell_env,
+            })
+        }
+    }
+}
+
+fn lwc_language_server_command(
+    language_server_id: &zed::LanguageServerId,
+    worktree: &zed::Worktree,
+) -> zed::Result<zed::Command> {
+    let node = zed::node_binary_path()?;
+    let server_path = ensure_lwc_language_server(language_server_id)?;
+
+    Ok(zed::Command {
+        command: node,
+        args: vec![server_path, "--stdio".to_string()],
+        env: worktree.shell_env(),
+    })
+}
+
+fn ensure_lwc_language_server(language_server_id: &zed::LanguageServerId) -> zed::Result<String> {
+    let installed_version = zed::npm_package_installed_version(LWC_LSP_PACKAGE_NAME)?;
+    if installed_version.as_deref() != Some(LWC_LSP_PACKAGE_VERSION) {
+        zed::set_language_server_installation_status(
+            language_server_id,
+            &LanguageServerInstallationStatus::Downloading,
+        );
+        if let Err(err) = zed::npm_install_package(LWC_LSP_PACKAGE_NAME, LWC_LSP_PACKAGE_VERSION) {
+            let message = format!(
+                "Failed to install {LWC_LSP_PACKAGE_NAME}@{LWC_LSP_PACKAGE_VERSION}: {err}"
+            );
+            zed::set_language_server_installation_status(
+                language_server_id,
+                &LanguageServerInstallationStatus::Failed(message.clone()),
+            );
+            return Err(message);
+        }
+    }
+
+    let work_dir = std::env::current_dir()
+        .map_err(|err| format!("Could not get extension work directory: {err}"))?;
+    let server_path = work_dir
+        .join("node_modules")
+        .join("@salesforce")
+        .join("lwc-language-server")
+        .join("bin")
+        .join("lwc-language-server.js");
+
+    if !server_path.is_file() {
+        let message = format!(
+            "{LWC_LSP_PACKAGE_NAME}@{LWC_LSP_PACKAGE_VERSION} is installed but {} was not found",
+            server_path.display()
+        );
+        zed::set_language_server_installation_status(
+            language_server_id,
+            &LanguageServerInstallationStatus::Failed(message.clone()),
+        );
+        return Err(message);
+    }
+
+    zed::set_language_server_installation_status(
+        language_server_id,
+        &LanguageServerInstallationStatus::None,
+    );
+
+    Ok(server_path.to_string_lossy().into_owned())
+}
 
 fn ensure_apex_lsp_jar(language_server_id: &zed::LanguageServerId) -> zed::Result<String> {
     let work_dir = std::env::current_dir().map_err(|err| err.to_string())?;

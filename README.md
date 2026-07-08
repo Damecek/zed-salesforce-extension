@@ -1,12 +1,12 @@
 # zed-salesforce-extension
 
-Salesforce DX language support for the Zed editor. Apex is backed by [`aer`](https://github.com/octoberswimmer/aer-dist/) (default) or Salesforce's Java-based Apex Language Server (`apex-jorje-lsp.jar`, opt-in). The extension scope covers additional Salesforce languages (SOQL/SOSL/logs today, LWC/Aura/Visualforce next).
+Salesforce DX language support for the Zed editor. Apex is backed by [`aer`](https://github.com/octoberswimmer/aer-dist/) (default) or Salesforce's Java-based Apex Language Server (`apex-jorje-lsp.jar`, opt-in). LWC HTML/JavaScript support is backed by Salesforce's `@salesforce/lwc-language-server`.
 
 ## Project Goal
 
 Build a **Zed extension** that enables Salesforce DX development with a practical MVP:
 
-- Salesforce source files are recognized in Zed (current: Apex + SOQL/SOSL/logs).
+- Salesforce source files are recognized in Zed (current: Apex, SOQL/SOSL/logs, and LWC HTML/JavaScript via Zed's built-in languages).
 - Basic syntax highlighting works (comments vs code, keywords, strings, etc.).
 - Apex Language Server (LSP) starts successfully for Apex files.
 - Core LSP features are available where the active backend supports them (at minimum diagnostics and completion).
@@ -50,6 +50,25 @@ To opt into jorje, set:
   }
 }
 ```
+
+## LWC language server
+
+Lightning Web Components are served by Salesforce's public npm package
+[`@salesforce/lwc-language-server`](https://www.npmjs.com/package/@salesforce/lwc-language-server).
+The extension installs pinned version `4.12.13` on first launch and then reuses
+Zed's extension-local `node_modules` cache on subsequent launches.
+
+The `lwc` language server is registered for Zed's built-in `HTML` and
+`JavaScript` languages with protocol ids `html` and `javascript`. Zed extension
+manifests currently register language servers by language name rather than by
+path glob, so this first cut can attach the LWC server to non-LWC HTML/JS files
+as well as files under `force-app/**/lwc/**`. Treat narrower path scoping as a
+follow-up unless Zed adds extension-level glob scoping for language servers.
+
+If npm installation is blocked by network or capability settings, Zed surfaces
+the install failure in the language server startup error. Users with restricted
+extension capabilities need to allow npm installation for
+`@salesforce/lwc-language-server`.
 
 ## Apex formatting with Prettier
 
