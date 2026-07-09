@@ -10,6 +10,9 @@ const LWC_LSP_PACKAGE_VERSION: &str = "4.12.13";
 const LWC_LSP_WRAPPER_REL_PATH: &str = "scripts/lwc-language-server-wrapper.js";
 const LWC_LSP_WRAPPER_SOURCE: &str = include_str!("../scripts/lwc-language-server-wrapper.js");
 const LWC_LSP_UPSTREAM_SERVER_ENV: &str = "ZED_SALESFORCE_LWC_UPSTREAM_SERVER_PATH";
+const LWC_CONFIG_FILE: &str = "lwc.config.json";
+const LWC_FALLBACK_MAX_DEPTH: usize = 6;
+const SFDX_PROJECT_FILE: &str = "sfdx-project.json";
 const APEX_LSP_MAIN_CLASS: &str = "apex.jorje.lsp.ApexLanguageServerLauncher";
 const APEX_LSP_JAR_CACHE_REL_PATH: &str = "lsp/apex-language-server/apex-jorje-lsp.jar";
 const APEX_LSP_JAR_DOWNLOAD_URL: &str = "https://raw.githubusercontent.com/forcedotcom/salesforcedx-vscode/67dc27932e0ce43b93abe00878a2f966d0eb16a3/packages/salesforcedx-vscode-apex/jars/apex-jorje-lsp.jar";
@@ -26,6 +29,16 @@ const AER_BACKEND_SETTING_KEY: &str = "backend";
 enum ApexLspBackend {
     Jorje,
     Aer,
+}
+
+struct SfdxProject {
+    package_directory_paths: Vec<String>,
+}
+
+impl SfdxProject {
+    fn has_package_directories(&self) -> bool {
+        !self.package_directory_paths.is_empty()
+    }
 }
 
 struct SalesforceExtension;
@@ -100,6 +113,13 @@ fn lwc_language_server_command(
     language_server_id: &zed::LanguageServerId,
     worktree: &zed::Worktree,
 ) -> zed::Result<zed::Command> {
+    if !has_lwc_workspace_roots(worktree)? {
+        return Err(format!(
+            "No LWC roots found in {}. Not starting the LWC language server.",
+            worktree.root_path()
+        ));
+    }
+
     let node = zed::node_binary_path()?;
     let server_path = ensure_lwc_language_server(language_server_id)?;
     let wrapper_path = ensure_lwc_language_server_wrapper(language_server_id)?;
@@ -111,6 +131,135 @@ fn lwc_language_server_command(
         args: vec![wrapper_path, "--stdio".to_string()],
         env,
     })
+}
+
+fn has_lwc_workspace_roots(worktree: &zed::Worktree) -> zed::Result<bool> {
+    let root_path = worktree.root_path();
+    if let Ok(json) = worktree.read_text_file(LWC_CONFIG_FILE) {
+        return has_lwc_config_module_roots(&json);
+    }
+
+    if let Some(project) = read_sfdx_project(
+        worktree,
+        "Fix the file before starting the LWC language server.",
+    )? {
+        return Ok(project.has_package_directories());
+    }
+
+    Ok(has_lwc_fallback_root(Path::new(&root_path)))
+}
+
+fn has_lwc_config_module_roots(json: &str) -> zed::Result<bool> {
+    Ok(!lwc_config_module_dirs(json)?.is_empty())
+}
+
+fn lwc_config_module_dirs(json: &str) -> zed::Result<Vec<String>> {
+    let root: serde_json::Value = serde_json::from_str(json).map_err(|err| {
+        format!(
+            "{LWC_CONFIG_FILE} at the worktree root is not valid JSON: {err}. \
+             Fix the file before starting the LWC language server."
+        )
+    })?;
+    let Some(dirs) = root.get("modules").and_then(|v| v.as_array()) else {
+        return Ok(Vec::new());
+    };
+
+    Ok(dirs
+        .iter()
+        .filter_map(|d| d.get("dir")?.as_str())
+        .map(str::trim)
+        .filter(|p| !p.is_empty())
+        .map(str::to_string)
+        .collect())
+}
+
+fn read_sfdx_project(
+    worktree: &zed::Worktree,
+    invalid_json_help: &str,
+) -> zed::Result<Option<SfdxProject>> {
+    let Ok(json) = worktree.read_text_file(SFDX_PROJECT_FILE) else {
+        return Ok(None);
+    };
+
+    parse_sfdx_project(&json, invalid_json_help).map(Some)
+}
+
+fn parse_sfdx_project(json: &str, invalid_json_help: &str) -> zed::Result<SfdxProject> {
+    let root: serde_json::Value = serde_json::from_str(json).map_err(|err| {
+        format!("{SFDX_PROJECT_FILE} at the worktree root is not valid JSON: {err}. {invalid_json_help}")
+    })?;
+
+    let package_directory_paths = root
+        .get("packageDirectories")
+        .and_then(|v| v.as_array())
+        .map(|dirs| {
+            dirs.iter()
+                .filter_map(|d| d.get("path")?.as_str())
+                .map(str::trim)
+                .filter(|path| !path.is_empty())
+                .map(str::to_string)
+                .collect()
+        })
+        .unwrap_or_default();
+
+    Ok(SfdxProject {
+        package_directory_paths,
+    })
+}
+
+fn has_lwc_fallback_root(root_path: &Path) -> bool {
+    has_lwc_fallback_root_at_depth(root_path, 0)
+}
+
+fn has_lwc_fallback_root_at_depth(dir: &Path, depth: usize) -> bool {
+    let Ok(entries) = std::fs::read_dir(dir) else {
+        return false;
+    };
+
+    for entry in entries.flatten() {
+        let path = entry.path();
+        let Ok(file_type) = entry.file_type() else {
+            continue;
+        };
+        if !file_type.is_dir() {
+            continue;
+        }
+
+        let name = entry.file_name();
+        let name = name.to_string_lossy();
+        if name == "lwc" && directory_has_child_directory(&path) {
+            return true;
+        }
+
+        if depth >= LWC_FALLBACK_MAX_DEPTH || should_skip_lwc_fallback_dir(&name) {
+            continue;
+        }
+
+        if has_lwc_fallback_root_at_depth(&path, depth + 1) {
+            return true;
+        }
+    }
+
+    false
+}
+
+fn directory_has_child_directory(dir: &Path) -> bool {
+    let Ok(entries) = std::fs::read_dir(dir) else {
+        return false;
+    };
+    entries.flatten().any(|entry| {
+        entry
+            .file_type()
+            .map(|file_type| file_type.is_dir())
+            .unwrap_or(false)
+    })
+}
+
+fn should_skip_lwc_fallback_dir(name: &str) -> bool {
+    matches!(
+        name,
+        ".cache" | ".git" | ".sfdx" | "build" | "dist" | "node_modules" | "target"
+    )
 }
 
 fn ensure_lwc_language_server(language_server_id: &zed::LanguageServerId) -> zed::Result<String> {
@@ -330,24 +479,17 @@ fn aer_source_args_from_sfdx(worktree: &zed::Worktree) -> zed::Result<Vec<String
     // Missing sfdx-project.json is fine — extension still serves Apex highlighting
     // and a single-file LSP session. Only surface an error when the file exists
     // but is malformed enough that we can't trust autodiscovery.
-    let Ok(json) = worktree.read_text_file("sfdx-project.json") else {
-        return Ok(Vec::new());
-    };
-    let root: serde_json::Value = serde_json::from_str(&json).map_err(|err| {
-        format!(
-            "sfdx-project.json at the worktree root is not valid JSON: {err}. \
-             Fix the file or override package paths via lsp.apex-language-server.settings.aer_source_paths."
-        )
-    })?;
-    let Some(dirs) = root.get("packageDirectories").and_then(|v| v.as_array()) else {
+    let Some(project) = read_sfdx_project(
+        worktree,
+        "Fix the file or override package paths via lsp.apex-language-server.settings.aer_source_paths.",
+    )?
+    else {
         return Ok(Vec::new());
     };
     let root_path = worktree.root_path();
-    let args: Vec<String> = dirs
+    let args: Vec<String> = project
+        .package_directory_paths
         .iter()
-        .filter_map(|d| d.get("path")?.as_str())
-        .map(|p| p.trim().to_string())
-        .filter(|p| !p.is_empty())
         .map(|p| normalize_source_path(&root_path, &p))
         .collect();
     Ok(args)
@@ -492,7 +634,11 @@ fn value_to_u64(value: &serde_json::Value) -> Option<u64> {
 
 #[cfg(test)]
 mod tests {
-    use super::normalize_source_path;
+    use super::{
+        has_lwc_fallback_root, lwc_config_module_dirs, normalize_source_path, parse_sfdx_project,
+    };
+    use std::fs;
+    use std::time::{SystemTime, UNIX_EPOCH};
 
     #[test]
     fn normalize_source_path_joins_relative_package_directory() {
@@ -508,5 +654,76 @@ mod tests {
             normalize_source_path("/workspace/project", "/tmp/force-app"),
             "/tmp/force-app"
         );
+    }
+
+    #[test]
+    fn lwc_config_module_dirs_reads_directory_records() {
+        let json = r#"{
+            "modules": [
+                { "dir": "src/lwc/modules/shared" },
+                { "npm": "example-package" },
+                { "name": "x/button", "path": "src/button/button.js" },
+                { "dir": "/tmp/external-lwc" }
+            ]
+        }"#;
+
+        assert_eq!(
+            lwc_config_module_dirs(json).unwrap(),
+            vec!["src/lwc/modules/shared", "/tmp/external-lwc"]
+        );
+    }
+
+    #[test]
+    fn parse_sfdx_project_reads_package_directory_paths() {
+        let json = r#"{
+            "packageDirectories": [
+                { "path": "force-app", "default": true },
+                { "path": "  nebula-logger  " },
+                { "path": "" }
+            ]
+        }"#;
+
+        let project = parse_sfdx_project(json, "Fix the file.").unwrap();
+
+        assert!(project.has_package_directories());
+        assert_eq!(
+            project.package_directory_paths,
+            vec!["force-app", "nebula-logger"]
+        );
+    }
+
+    #[test]
+    fn has_lwc_fallback_root_detects_any_lwc_directory_with_children() {
+        let root = temp_test_root("fallback-detects");
+        fs::create_dir_all(root.join("packages/app/main/default/lwc/hello")).unwrap();
+
+        assert!(has_lwc_fallback_root(&root));
+
+        fs::remove_dir_all(root).ok();
+    }
+
+    #[test]
+    fn has_lwc_fallback_root_ignores_generated_sfdx_cache() {
+        let root = temp_test_root("fallback-ignores-sfdx");
+        let cache_dir = root.join(".sfdx/indexes/lwc");
+        fs::create_dir_all(&cache_dir).unwrap();
+        fs::write(cache_dir.join("custom-components.json"), "[]").unwrap();
+
+        assert!(!has_lwc_fallback_root(&root));
+
+        fs::remove_dir_all(root).ok();
+    }
+
+    fn temp_test_root(name: &str) -> std::path::PathBuf {
+        let now = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_nanos();
+        let root = std::env::temp_dir().join(format!(
+            "zed-salesforce-extension-{name}-{}-{now}",
+            std::process::id()
+        ));
+        fs::create_dir_all(&root).unwrap();
+        root
     }
 }

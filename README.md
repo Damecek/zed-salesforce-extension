@@ -61,10 +61,20 @@ Zed's extension-local `node_modules` cache on subsequent launches.
 The extension registers one LWC language server entry for Zed's built-in `HTML`
 and `JavaScript` languages with protocol ids `html` and `javascript`. Zed
 extension manifests currently register language servers by language name rather
-than by path glob, so this first cut can attach the LWC server to non-LWC
-HTML/JS files as well as files under `force-app/**/lwc/**`. Treat narrower path
-scoping as a follow-up unless Zed adds extension-level glob scoping for language
-servers.
+than by path glob, so the manifest has to be broad. The extension-side launcher
+therefore checks the worktree before starting the process and refuses to launch
+the LWC server unless one of these entry points matches:
+
+- `lwc.config.json` exists at the worktree root and at least one `modules[].dir`
+  directory exists.
+- Otherwise, `sfdx-project.json` exists at the worktree root and contains at
+  least one `packageDirectories[].path`.
+- As a best-effort local fallback, the worktree contains a directory matching
+  `*/lwc/*`, such as `force-app/main/default/lwc/hello` or
+  `src/lwc/modules/content`.
+
+This keeps ordinary HTML/JavaScript projects from starting Salesforce's LWC
+server until Zed supports path-scoped language server activation.
 
 The extension launches Salesforce's server through
 `scripts/lwc-language-server-wrapper.js` instead of running the upstream
@@ -79,8 +89,8 @@ Default LWC behavior suppresses IDE-scoped workspace files:
 - `.vscode/settings.json`
 - `core.code-workspace`
 
-By default, the wrapper still allows upstream-generated files that can improve
-LWC development and code intelligence:
+When the LWC server is allowed to start, the wrapper still allows
+upstream-generated files that can improve LWC development and code intelligence:
 
 - `.sfdx/indexes/lwc/custom-components.json`
 - `.sfdx/typings/lwc/*`
@@ -97,8 +107,8 @@ The current rule is:
 Specifically, the wrapper always patches upstream settings/workspace writes so
 `.vscode/settings.json` and `core.code-workspace` are not created by Zed.
 
-The wrapper does not patch upstream component indexing or typing generation.
-That means upstream may create and maintain:
+The wrapper does not patch upstream component indexing or typing generation for
+accepted LWC worktrees. That means upstream may create and maintain:
 
 - `.sfdx/indexes/lwc/custom-components.json`, a cache of discovered custom LWC
   components that can help component intelligence across server restarts
