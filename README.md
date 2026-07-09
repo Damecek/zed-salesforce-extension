@@ -58,20 +58,54 @@ Lightning Web Components are served by Salesforce's public npm package
 The extension installs pinned version `4.12.13` on first launch and then reuses
 Zed's extension-local `node_modules` cache on subsequent launches.
 
-The `lwc-language-server` LSP entry is registered for Zed's built-in `HTML` and
-`JavaScript` languages with protocol ids `html` and `javascript`. Zed extension
-manifests currently register language servers by language name rather than by
-path glob, so this first cut can attach the LWC server to non-LWC HTML/JS files
-as well as files under `force-app/**/lwc/**`. Treat narrower path scoping as a
-follow-up unless Zed adds extension-level glob scoping for language servers.
+The extension registers one LWC language server entry for Zed's built-in `HTML`
+and `JavaScript` languages with protocol ids `html` and `javascript`. Zed
+extension manifests currently register language servers by language name rather
+than by path glob, so this first cut can attach the LWC server to non-LWC
+HTML/JS files as well as files under `force-app/**/lwc/**`. Treat narrower path
+scoping as a follow-up unless Zed adds extension-level glob scoping for language
+servers.
 
-Operational note: upstream `@salesforce/lwc-language-server@4.12.13` performs
-workspace setup during LSP `initialize`. Through `@salesforce/lightning-lsp-common`
-it writes VS Code-oriented project files such as `.vscode/settings.json` and
-`core.code-workspace`, and its component indexer writes
-`.sfdx/indexes/lwc/custom-components.json`. Preventing those workspace writes
-requires an extension-side wrapper or upstream option; Zed LSP settings alone do
-not disable them.
+The extension launches Salesforce's server through
+`scripts/lwc-language-server-wrapper.js` instead of running the upstream
+`bin/lwc-language-server.js` directly. The wrapper exists because upstream
+`@salesforce/lwc-language-server@4.12.13` performs VS Code/SFDX workspace setup
+during startup. By default, the wrapper patches those setup hooks before the
+server starts so opening a project in Zed does not create or rewrite project
+files.
+
+Default LWC behavior suppresses IDE-scoped workspace files:
+
+- `.vscode/settings.json`
+- `core.code-workspace`
+
+By default, the wrapper still allows upstream-generated files that can improve
+LWC development and code intelligence:
+
+- `.sfdx/indexes/lwc/custom-components.json`
+- `.sfdx/typings/lwc/*`
+- generated LWC `jsconfig.json` / `tsconfig.json` files
+- `.forceignore` updates for those generated JavaScript/TypeScript helper files
+
+This behavior is intentionally not user-configurable yet. The extension keeps a
+single code path until someone has a concrete use case for exposing a setting.
+The current rule is:
+
+- suppress files that are scoped to another IDE or workspace model
+- allow generated files that generally help Salesforce LWC code intelligence
+
+Specifically, the wrapper always patches upstream settings/workspace writes so
+`.vscode/settings.json` and `core.code-workspace` are not created by Zed.
+
+The wrapper does not patch upstream component indexing or typing generation.
+That means upstream may create and maintain:
+
+- `.sfdx/indexes/lwc/custom-components.json`, a cache of discovered custom LWC
+  components that can help component intelligence across server restarts
+- `.sfdx/typings/lwc/*.d.ts`, generated typings for Salesforce metadata such as
+  static resources, content assets, message channels, and custom labels
+- generated LWC `jsconfig.json` / `tsconfig.json` files and related
+  `.forceignore` updates used by upstream JavaScript/TypeScript project support
 
 If npm installation is blocked by network or capability settings, Zed surfaces
 the install failure in the language server startup error. Users with restricted

@@ -7,6 +7,9 @@ const APEX_LSP_ID: &str = "apex-language-server";
 const LWC_LSP_ID: &str = "lwc-language-server";
 const LWC_LSP_PACKAGE_NAME: &str = "@salesforce/lwc-language-server";
 const LWC_LSP_PACKAGE_VERSION: &str = "4.12.13";
+const LWC_LSP_WRAPPER_REL_PATH: &str = "scripts/lwc-language-server-wrapper.js";
+const LWC_LSP_WRAPPER_SOURCE: &str = include_str!("../scripts/lwc-language-server-wrapper.js");
+const LWC_LSP_UPSTREAM_SERVER_ENV: &str = "ZED_SALESFORCE_LWC_UPSTREAM_SERVER_PATH";
 const APEX_LSP_MAIN_CLASS: &str = "apex.jorje.lsp.ApexLanguageServerLauncher";
 const APEX_LSP_JAR_CACHE_REL_PATH: &str = "lsp/apex-language-server/apex-jorje-lsp.jar";
 const APEX_LSP_JAR_DOWNLOAD_URL: &str = "https://raw.githubusercontent.com/forcedotcom/salesforcedx-vscode/67dc27932e0ce43b93abe00878a2f966d0eb16a3/packages/salesforcedx-vscode-apex/jars/apex-jorje-lsp.jar";
@@ -99,11 +102,14 @@ fn lwc_language_server_command(
 ) -> zed::Result<zed::Command> {
     let node = zed::node_binary_path()?;
     let server_path = ensure_lwc_language_server(language_server_id)?;
+    let wrapper_path = ensure_lwc_language_server_wrapper(language_server_id)?;
+    let mut env = worktree.shell_env();
+    env.push((LWC_LSP_UPSTREAM_SERVER_ENV.to_string(), server_path));
 
     Ok(zed::Command {
         command: node,
-        args: vec![server_path, "--stdio".to_string()],
-        env: worktree.shell_env(),
+        args: vec![wrapper_path, "--stdio".to_string()],
+        env,
     })
 }
 
@@ -153,6 +159,61 @@ fn ensure_lwc_language_server(language_server_id: &zed::LanguageServerId) -> zed
     );
 
     Ok(server_path.to_string_lossy().into_owned())
+}
+
+fn ensure_lwc_language_server_wrapper(
+    language_server_id: &zed::LanguageServerId,
+) -> zed::Result<String> {
+    let work_dir = std::env::current_dir()
+        .map_err(|err| format!("Could not get extension work directory: {err}"))?;
+    let wrapper_path = work_dir.join(LWC_LSP_WRAPPER_REL_PATH);
+
+    if let Some(parent) = wrapper_path.parent() {
+        std::fs::create_dir_all(parent).map_err(|err| {
+            let message = format!(
+                "Could not create LWC language server wrapper directory {}: {err}",
+                parent.display()
+            );
+            zed::set_language_server_installation_status(
+                language_server_id,
+                &LanguageServerInstallationStatus::Failed(message.clone()),
+            );
+            message
+        })?;
+    }
+
+    let should_write = match std::fs::read_to_string(&wrapper_path) {
+        Ok(existing) => existing != LWC_LSP_WRAPPER_SOURCE,
+        Err(_) => true,
+    };
+
+    if should_write {
+        std::fs::write(&wrapper_path, LWC_LSP_WRAPPER_SOURCE).map_err(|err| {
+            let message = format!(
+                "Could not write LWC language server wrapper {}: {err}",
+                wrapper_path.display()
+            );
+            zed::set_language_server_installation_status(
+                language_server_id,
+                &LanguageServerInstallationStatus::Failed(message.clone()),
+            );
+            message
+        })?;
+    }
+
+    if !wrapper_path.is_file() {
+        let message = format!(
+            "LWC language server wrapper {} was not created",
+            wrapper_path.display()
+        );
+        zed::set_language_server_installation_status(
+            language_server_id,
+            &LanguageServerInstallationStatus::Failed(message.clone()),
+        );
+        return Err(message);
+    }
+
+    Ok(wrapper_path.to_string_lossy().into_owned())
 }
 
 fn ensure_apex_lsp_jar(language_server_id: &zed::LanguageServerId) -> zed::Result<String> {
