@@ -12,26 +12,26 @@ snippets = [
     "snippets/sosl.json",
 ]
 
-[language_servers.apex-lsp]
+[language_servers.apex-language-server]
 name = "Apex Language Server"
-# SOQL is wired to apex-lsp because aer (the default backend) ships SOQL
+# SOQL is wired to apex-language-server because aer (the default backend) ships SOQL
 # diagnostics, hover, and field validation against the local schema
 # (see aer release notes v0.0.101 / v0.0.113). The jorje backend ignores
 # SOQL buffers — that is intentional; users on jorje see only highlights.
 languages = ["Apex", "SOQL"]
 
-[language_servers.apex-lsp.language_ids]
+[language_servers.apex-language-server.language_ids]
 "Apex" = "apex"
 "SOQL" = "soql"
 
-[language_servers.lwc]
+[language_servers.lwc-language-server]
 name = "LWC Language Server"
 # Zed currently registers language servers by language name, not by path glob.
 # This attaches the LWC server to HTML/JavaScript buffers globally; Salesforce
 # workspace scoping is handled by the server itself where possible.
 languages = ["HTML", "JavaScript"]
 
-[language_servers.lwc.language_ids]
+[language_servers.lwc-language-server.language_ids]
 "HTML" = "html"
 "JavaScript" = "javascript"
 

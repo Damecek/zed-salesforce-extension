@@ -36,7 +36,7 @@ When quoting, keep excerpts short; prefer paraphrase + citation.
 
 Prefer local runtime assets when available (stable, works offline):
 - Apex LSP launch wiring: `src/lib.rs` (pinned jar URL + checksum-aware cache).
-- Smoke test: `scripts/test-lsp-launch.sh` (downloads the pinned jar into `.cache/apex-lsp/`).
+- Smoke test: `scripts/test-lsp-launch.sh` (downloads the pinned jar into `.cache/apex-language-server/`).
 
 ## Output Expectations (when reporting findings)
 

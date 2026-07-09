@@ -34,7 +34,7 @@ Primary references for this architecture:
 
 ## Apex LSP backends
 
-The extension supports two Apex language server backends, selectable via `lsp.apex-lsp.settings.backend`:
+The extension supports two Apex language server backends, selectable via `lsp.apex-language-server.settings.backend`:
 
 - `aer` (default) — [`aer`](https://github.com/octoberswimmer/aer-dist/) is a fast, modern, native Apex language server distributed as a single binary. No JVM required. Source paths are auto-discovered from `sfdx-project.json` `packageDirectories`.
 - `jorje` — Salesforce's official Java-based `apex-jorje-lsp.jar` (downloaded and cached on first launch). Requires a Java 11+ runtime on the system.
@@ -44,7 +44,7 @@ To opt into jorje, set:
 ```json
 {
   "lsp": {
-    "apex-lsp": {
+    "apex-language-server": {
       "settings": { "backend": "jorje" }
     }
   }
@@ -58,12 +58,20 @@ Lightning Web Components are served by Salesforce's public npm package
 The extension installs pinned version `4.12.13` on first launch and then reuses
 Zed's extension-local `node_modules` cache on subsequent launches.
 
-The `lwc` language server is registered for Zed's built-in `HTML` and
+The `lwc-language-server` LSP entry is registered for Zed's built-in `HTML` and
 `JavaScript` languages with protocol ids `html` and `javascript`. Zed extension
 manifests currently register language servers by language name rather than by
 path glob, so this first cut can attach the LWC server to non-LWC HTML/JS files
 as well as files under `force-app/**/lwc/**`. Treat narrower path scoping as a
 follow-up unless Zed adds extension-level glob scoping for language servers.
+
+Operational note: upstream `@salesforce/lwc-language-server@4.12.13` performs
+workspace setup during LSP `initialize`. Through `@salesforce/lightning-lsp-common`
+it writes VS Code-oriented project files such as `.vscode/settings.json` and
+`core.code-workspace`, and its component indexer writes
+`.sfdx/indexes/lwc/custom-components.json`. Preventing those workspace writes
+requires an extension-side wrapper or upstream option; Zed LSP settings alone do
+not disable them.
 
 If npm installation is blocked by network or capability settings, Zed surfaces
 the install failure in the language server startup error. Users with restricted
@@ -280,14 +288,14 @@ If the pinned `rev` changes, re-sync the query files from upstream in the same P
 
 In `extension.toml`:
 
-- Define language server entry for Apex (e.g. `[language_servers.apex-lsp]`).
+- Define language server entry for Apex (e.g. `[language_servers.apex-language-server]`).
 - Map it to language `Apex`.
 
 In Rust extension code (`src/lib.rs`):
 
 - Implement `language_server_command(...) -> zed::Command`.
 - Branch on the configured backend (`aer` default, `jorje` opt-in).
-- For `aer`: resolve the binary via `lsp.apex-lsp.binary.path` → `lsp.apex-lsp.settings.aer_path` → `worktree.which("aer")`, then launch with `aer lsp [<source-root>]...`.
+- For `aer`: resolve the binary via `lsp.apex-language-server.binary.path` → `lsp.apex-language-server.settings.aer_path` → `worktree.which("aer")`, then launch with `aer lsp [<source-root>]...`.
 - For `jorje`: launch a Java process similarly to Salesforce VS Code:
   - `command`: resolved Java executable path
   - `args`: `-cp <path-to-jar> apex.jorje.lsp.ApexLanguageServerLauncher`
@@ -299,15 +307,15 @@ In Rust extension code (`src/lib.rs`):
 When the jorje backend is selected, the extension runtime **downloads and caches the jar on first use** inside the extension work directory.
 
 - Canonical runtime source: the pinned upstream jar URL from `forcedotcom/salesforcedx-vscode`
-- Cached runtime jar path: `<extension-workdir>/lsp/apex-lsp/apex-jorje-lsp.jar`
-- The local smoke test (`scripts/test-lsp-launch.sh`) downloads the same jar into `.cache/apex-lsp/` (gitignored) and verifies its SHA-256 before each run
+- Cached runtime jar path: `<extension-workdir>/lsp/apex-language-server/apex-jorje-lsp.jar`
+- The local smoke test (`scripts/test-lsp-launch.sh`) downloads the same jar into `.cache/apex-language-server/` (gitignored) and verifies its SHA-256 before each run
 
 ## 6) Java runtime acquisition strategy (jorje backend only)
 
 Only relevant when `backend` is set to `jorje`. Required capability in extension logic:
 
-- Prefer explicit Zed LSP setting for this server (e.g. `lsp.apex-lsp.binary.path` pointing to a `java` executable).
-- Support explicit Java home via `lsp.apex-lsp.settings.java_home` (resolved as `<java_home>/bin/java`).
+- Prefer explicit Zed LSP setting for this server (e.g. `lsp.apex-language-server.binary.path` pointing to a `java` executable).
+- Support explicit Java home via `lsp.apex-language-server.settings.java_home` (resolved as `<java_home>/bin/java`).
 - Fallback to `JDK_HOME`, then `JAVA_HOME`.
 - Auto-install the Apex jar on first launch and reuse the cached copy on subsequent launches.
 - Validate:
@@ -319,22 +327,22 @@ Only relevant when `backend` is set to `jorje`. Required capability in extension
 Heap behavior:
 
 - default is preset by the extension to `-Xmx2048m` (no user config needed)
-- optional override: `lsp.apex-lsp.settings.java_max_heap_mb`
-- advanced override: `lsp.apex-lsp.binary.arguments` with explicit `-Xmx...` (takes precedence)
+- optional override: `lsp.apex-language-server.settings.java_max_heap_mb`
+- advanced override: `lsp.apex-language-server.binary.arguments` with explicit `-Xmx...` (takes precedence)
 
 Default Apex LSP JVM properties:
 
 - `-Ddebug.internal.errors=true`
 - `-Ddebug.completion.statistics=false`
 - `-Dlwc.typegeneration.disabled=true`
-- advanced override: `lsp.apex-lsp.binary.arguments` with explicit `-D...` for the same property name (takes precedence)
+- advanced override: `lsp.apex-language-server.binary.arguments` with explicit `-D...` for the same property name (takes precedence)
 
 Example `.zed/settings.json` (jorje backend):
 
 ```json
 {
   "lsp": {
-    "apex-lsp": {
+    "apex-language-server": {
       "settings": {
         "backend": "jorje",
         "java_home": "/Library/Java/JavaVirtualMachines/temurin-21.jdk/Contents/Home",
@@ -352,7 +360,7 @@ Example `.zed/settings.json` (aer backend, default — only needed if `aer` is n
 ```json
 {
   "lsp": {
-    "apex-lsp": {
+    "apex-language-server": {
       "settings": {
         "aer_path": "/usr/local/bin/aer"
       }
@@ -378,7 +386,7 @@ References:
 - [aer server docs](https://www.octoberswimmer.com/tools/aer/docs/aer_server/): source paths can include Apex classes, triggers, flows, and object metadata; loaded External Service Registrations can provide callback routes.
 - Metadata API: [Apex classes](https://developer.salesforce.com/docs/atlas.en-us.api_meta.meta/api_meta/meta_classes.htm) are stored in `classes`; [Apex triggers](https://developer.salesforce.com/docs/atlas.en-us.api_meta.meta/api_meta/meta_triggers.htm) are stored in `triggers`.
 
-For unusual workspaces, set `lsp.apex-lsp.settings.aer_source_paths` explicitly to source roots containing Apex and adjacent metadata.
+For unusual workspaces, set `lsp.apex-language-server.settings.aer_source_paths` explicitly to source roots containing Apex and adjacent metadata.
 
 ## 7) Workspace assumptions and limitations
 
@@ -525,7 +533,7 @@ Current known parser gap:
 `scripts/test-lsp-launch.sh` provides deterministic process-level validation:
 
 1. Resolves Java path (setting/env simulation).
-2. Downloads the pinned Apex LSP jar into `.cache/apex-lsp/` if missing and validates its SHA-256 checksum.
+2. Downloads the pinned Apex LSP jar into `.cache/apex-language-server/` if missing and validates its SHA-256 checksum.
 3. Runs short-lived Apex LSP launch smoke tests (jorje backend):
    - start the process
    - perform a minimal LSP handshake over stdio

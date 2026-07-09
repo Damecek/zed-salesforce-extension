@@ -7,7 +7,7 @@ REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 # Keep URL in sync with APEX_LSP_JAR_DOWNLOAD_URL in src/lib.rs.
 JAR_URL="https://raw.githubusercontent.com/forcedotcom/salesforcedx-vscode/67dc27932e0ce43b93abe00878a2f966d0eb16a3/packages/salesforcedx-vscode-apex/jars/apex-jorje-lsp.jar"
 JAR_SHA256="4b0d014f7a91d16b437868b2076a8e93ab29821dfe938c10e0e4cd9a4b2fc01d"
-JAR_CACHE_DIR="${REPO_ROOT}/.cache/apex-lsp"
+JAR_CACHE_DIR="${REPO_ROOT}/.cache/apex-language-server"
 JAR_PATH="${JAR_CACHE_DIR}/apex-jorje-lsp.jar"
 WORKSPACE_PATH="${REPO_ROOT}/scripts/fixtures/sfdx-minimal"
 PROBE_FILE="force-app/main/default/triggers/SmokeTest.trigger"

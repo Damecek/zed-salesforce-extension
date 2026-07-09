@@ -3,12 +3,12 @@ use zed_extension_api as zed;
 use zed_extension_api::serde_json;
 use zed_extension_api::{DownloadedFileType, LanguageServerInstallationStatus};
 
-const APEX_LSP_ID: &str = "apex-lsp";
-const LWC_LSP_ID: &str = "lwc";
+const APEX_LSP_ID: &str = "apex-language-server";
+const LWC_LSP_ID: &str = "lwc-language-server";
 const LWC_LSP_PACKAGE_NAME: &str = "@salesforce/lwc-language-server";
 const LWC_LSP_PACKAGE_VERSION: &str = "4.12.13";
 const APEX_LSP_MAIN_CLASS: &str = "apex.jorje.lsp.ApexLanguageServerLauncher";
-const APEX_LSP_JAR_CACHE_REL_PATH: &str = "lsp/apex-lsp/apex-jorje-lsp.jar";
+const APEX_LSP_JAR_CACHE_REL_PATH: &str = "lsp/apex-language-server/apex-jorje-lsp.jar";
 const APEX_LSP_JAR_DOWNLOAD_URL: &str = "https://raw.githubusercontent.com/forcedotcom/salesforcedx-vscode/67dc27932e0ce43b93abe00878a2f966d0eb16a3/packages/salesforcedx-vscode-apex/jars/apex-jorje-lsp.jar";
 const APEX_LSP_DEFAULT_JVM_PROPERTIES: [(&str, &str); 3] = [
     ("debug.internal.errors", "true"),
@@ -275,7 +275,7 @@ fn aer_source_args_from_sfdx(worktree: &zed::Worktree) -> zed::Result<Vec<String
     let root: serde_json::Value = serde_json::from_str(&json).map_err(|err| {
         format!(
             "sfdx-project.json at the worktree root is not valid JSON: {err}. \
-             Fix the file or override package paths via lsp.apex-lsp.settings.aer_source_paths."
+             Fix the file or override package paths via lsp.apex-language-server.settings.aer_source_paths."
         )
     })?;
     let Some(dirs) = root.get("packageDirectories").and_then(|v| v.as_array()) else {
@@ -296,13 +296,13 @@ fn resolve_aer_binary(
     lsp_settings: &zed::settings::LspSettings,
     worktree: &zed::Worktree,
 ) -> zed::Result<String> {
-    // Priority 1: lsp.apex-lsp.binary.path
+    // Priority 1: lsp.apex-language-server.binary.path
     if let Some(binary) = &lsp_settings.binary {
         if let Some(path) = &binary.path {
             return Ok(path.clone());
         }
     }
-    // Priority 2: lsp.apex-lsp.settings.aer_path
+    // Priority 2: lsp.apex-language-server.settings.aer_path
     if let Some(aer_path) = setting_value(lsp_settings, "aer_path")
         .and_then(|v| v.as_str())
         .map(|s| s.trim().to_string())
@@ -316,7 +316,7 @@ fn resolve_aer_binary(
     }
     Err(format!(
         "aer binary not found. Install from https://github.com/octoberswimmer/aer-dist/ \
-         or set 'aer_path' in lsp.apex-lsp.settings"
+         or set 'aer_path' in lsp.apex-language-server.settings"
     ))
 }
 
