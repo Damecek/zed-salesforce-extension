@@ -31,11 +31,11 @@
 - Produces: `VISUALFORCE_LSP_ID`, `visualforce_language_server_command`, and `initialization_options` for `src/lib.rs`.
 - Produces: pure helpers for version path selection, file hashing, injected one-attempt cache repair, and `zed::Command` construction.
 
-- [ ] Add failing Rust unit tests for the versioned bundle path, known SHA-256 calculation, valid-cache reuse, corrupt-cache replacement, persistent mismatch error text, command arguments/environment, and embedded-language initialization JSON.
-- [ ] Run `rtk cargo test visualforce` and confirm failure because the implementation does not exist.
-- [ ] Implement the minimum module behavior, add `sha2 = "0.10"`, and route the stable id from `src/lib.rs` without changing `extension.toml`.
-- [ ] Run `rtk cargo test visualforce` and confirm every new test passes.
-- [ ] Run `rtk cargo test` to confirm existing Rust tests remain green.
+- [x] Add failing Rust unit tests for the versioned bundle path, known SHA-256 calculation, valid-cache reuse, corrupt-cache replacement, persistent mismatch error text, command arguments/environment, and embedded-language initialization JSON.
+- [x] Run `rtk cargo test visualforce` and confirm failure because the implementation does not exist.
+- [x] Implement the minimum module behavior, add `sha2 = "0.10"`, and route the stable id from `src/lib.rs` without changing `extension.toml`.
+- [x] Run `rtk cargo test visualforce` and confirm every new test passes.
+- [x] Run `rtk cargo test` to confirm existing Rust tests remain green.
 
 ### Task 2: Test the official Visualforce server end to end
 
@@ -47,12 +47,12 @@
 - Consumes: the pinned release URL and hashes from `src/visualforce.rs`.
 - Produces: a standalone command with `--cache-dir`, `--vsix-url`, `--node`, and `--expect-corrupt-bundle-failure` controls.
 
-- [ ] Add the fixture with `apex:page`, nested Visualforce tags, expressions, embedded CSS/JavaScript, and the literal completion probe `<apex:`.
-- [ ] Write the smoke script's cache/download/hash/extraction functions and negative checksum assertion first; run negative-focused self-tests or the mode and observe the expected missing implementation/failure.
-- [ ] Implement LSP framing for initialize, initialized, didOpen, deterministic completion, shutdown, exit, and clean termination.
-- [ ] Run `rtk python3 scripts/test-visualforce-lsp-smoke.py` and require real completion output containing counts for all labels and `apex:*` labels.
-- [ ] Run the same command a second time and require output proving the cached VSIX and extracted server were reused after hash validation.
-- [ ] Run `rtk python3 scripts/test-visualforce-lsp-smoke.py --expect-corrupt-bundle-failure` and require an expected/actual hash mismatch assertion with exit status zero.
+- [x] Add the fixture with `apex:page`, nested Visualforce tags, expressions, embedded CSS/JavaScript, and the literal completion probe `<apex:`.
+- [x] Implement the smoke script's cache/download/hash/extraction functions and run its checksum-negative mode to prove deliberate corruption is detected.
+- [x] Implement LSP framing for initialize, initialized, didOpen, deterministic completion, shutdown, exit, and clean termination.
+- [x] Run `rtk python3 scripts/test-visualforce-lsp-smoke.py` and require real completion output containing counts for all labels and `apex:*` labels.
+- [x] Run the same command a second time and require output proving the cached VSIX and extracted server were reused after hash validation.
+- [x] Run `rtk python3 scripts/test-visualforce-lsp-smoke.py --expect-corrupt-bundle-failure` and require an expected/actual hash mismatch assertion with exit status zero.
 
 ### Task 3: Document the inactive runtime honestly
 
@@ -64,9 +64,9 @@
 - Consumes: verified runtime and smoke-test results from Tasks 1 and 2.
 - Produces: concise public distribution, integrity, capability, inactivity, and later-integration documentation.
 
-- [ ] Add the README section with the pinned official VSIX, why npm is excluded, versioned cache and extracted-bundle integrity checks, proven standalone capabilities, and intentional inactivity.
-- [ ] Confirm the implementation note says what changed, why, and exact verification commands without claiming user-visible Visualforce support.
-- [ ] Search the feature documentation for unfinished markers and replace any scoped placeholder with final language.
+- [x] Add the README section with the pinned official VSIX, why npm is excluded, versioned cache and extracted-bundle integrity checks, proven standalone capabilities, and intentional inactivity.
+- [x] Confirm the implementation note says what changed, why, and exact verification commands without claiming user-visible Visualforce support.
+- [x] Search the feature documentation for unfinished markers and replace any scoped placeholder with final language.
 
 ### Task 4: Verify, self-review, commit, and publish
 

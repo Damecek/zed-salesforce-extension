@@ -122,6 +122,59 @@ the install failure in the language server startup error. Users with restricted
 extension capabilities need to allow npm installation for
 `@salesforce/lwc-language-server`.
 
+## Visualforce language server groundwork (inactive)
+
+The repository includes reusable Visualforce language-server runtime code, but
+Visualforce support is intentionally **not active or user-visible yet**. There is
+no Visualforce language, grammar, file association, or language-server entry in
+`extension.toml` until the real external Tree-sitter grammar is ready.
+
+Salesforce's internal Visualforce language-server packages are not published on
+npm, so this extension does not attempt an npm install or a runtime source build.
+Instead, the staged runtime uses Salesforce's official Visualforce VSIX from
+release [`v67.4.0`](https://github.com/forcedotcom/salesforcedx-vscode/releases/tag/v67.4.0):
+
+- VSIX URL: `https://github.com/forcedotcom/salesforcedx-vscode/releases/download/v67.4.0/salesforcedx-vscode-visualforce-67.4.0.vsix`
+- VSIX SHA-256: `6232bb3dc3bdfe2c491601b9c96c488fb52941c2ff62bcc125230e4dceacbb0c`
+- extracted entry point: `extension/dist/visualforceServer.js`
+- extracted server SHA-256: `37f6808e5e4bd360f7c7f219fd2d71cc8d7ce22688b271c1a4ae5020bd85bb3f`
+
+When the server is registered in a later integration change, Zed will extract
+the pinned VSIX into the extension-local versioned cache at
+`lsp/visualforce-language-server/v67.4.0/`. The launcher hashes the extracted
+JavaScript before every execution. A valid cache is reused; a missing or invalid
+bundle gets one clean download/extraction attempt after removing only that
+Visualforce version directory. A replacement with the wrong hash fails with an
+expected/actual integrity error. The command is Zed's Node.js runtime followed
+by the verified `visualforceServer.js` path and `--stdio`, with the worktree shell
+environment. Initialization enables embedded CSS and JavaScript support.
+
+The standalone smoke test independently verifies both the downloaded VSIX and
+the extracted server hashes. It then initializes the real server, opens
+`scripts/fixtures/visualforce/CompletionProbe.page`, requests completion, shuts
+down, and checks clean process termination. The verified run returned 246
+completion items, including 93 unique `apex:*` labels. Run it twice to exercise
+cold and warm caches, followed by its deterministic checksum-negative mode:
+
+```bash
+rtk python3 scripts/test-visualforce-lsp-smoke.py
+rtk python3 scripts/test-visualforce-lsp-smoke.py
+rtk python3 scripts/test-visualforce-lsp-smoke.py --expect-corrupt-bundle-failure
+```
+
+The test cache defaults to the ignored `.cache/visualforce-language-server/`
+directory. `--cache-dir`, `--vsix-url`, and `--node` (or the corresponding
+`VISUALFORCE_LSP_CACHE_DIR`, `VISUALFORCE_LSP_VSIX_URL`, and
+`VISUALFORCE_LSP_NODE` environment variables) make offline and repeated runs
+controllable.
+
+Activation has one explicit external dependency: a real public revision of
+[`Damecek/tree-sitter-visualforce`](https://github.com/Damecek/tree-sitter-visualforce).
+The integration change must pin that revision, add the real
+`languages/visualforce/**` files, and register `visualforce-language-server` for
+the new `Visualforce` language. It must not use a placeholder grammar or attach
+the server globally to HTML.
+
 ## Apex formatting with Prettier
 
 The Apex language declaration sets `prettier_parser_name = "apex"`, so Zed's
