@@ -1,0 +1,32 @@
+<apex:page controller="AccountListController" showHeader="{!IF($User.UserType = 'Standard', true, false)}">
+    <apex:form id="accountForm">
+        <apex:pageBlock title="{!pageTitle}">
+            <apex:pageMessages />
+            <apex:pageBlockTable value="{!accounts}" var="account">
+                <apex:column value="{!account.Name}" />
+                <apex:column headerValue="Action">
+                    <apex:commandLink value="Select" action="{!selectAccount}">
+                        <apex:param name="accountId" value="{!account.Id}" assignTo="{!selectedAccountId}" />
+                    </apex:commandLink>
+                </apex:column>
+            </apex:pageBlockTable>
+        </apex:pageBlock>
+    </apex:form>
+
+    <style>
+        .selected-account {
+            color: #0176d3;
+            font-weight: 600;
+        }
+    </style>
+
+    <script>
+        function showSelectedAccount() {
+            const selectedId = '{!JSENCODE(selectedAccountId)}';
+            document.querySelector('.selected-account').dataset.accountId = selectedId;
+        }
+    </script>
+
+    <!-- VISUALFORCE_COMPLETION_PROBE -->
+    <apex:
+</apex:page>
