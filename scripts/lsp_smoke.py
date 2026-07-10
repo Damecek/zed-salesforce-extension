@@ -22,10 +22,10 @@ def wait_readable(stream, timeout_seconds):
 
 
 def read_message(stream, timeout_seconds):
+    if not wait_readable(stream, timeout_seconds):
+        return None
     headers = {}
     while True:
-        if not wait_readable(stream, timeout_seconds):
-            return None
         line = stream.readline()
         if not line:
             return None
@@ -41,8 +41,6 @@ def read_message(stream, timeout_seconds):
         return None
 
     length = int(content_length)
-    if not wait_readable(stream, timeout_seconds):
-        return None
     body = stream.read(length)
     if not body:
         return None

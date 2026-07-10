@@ -13,9 +13,20 @@ SPEC = importlib.util.spec_from_file_location("visualforce_lsp_smoke", SCRIPT_PA
 SMOKE = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(SMOKE)
 
+APEX_SCRIPT_PATH = Path(__file__).with_name("lsp_smoke.py")
+APEX_SPEC = importlib.util.spec_from_file_location("apex_lsp_smoke", APEX_SCRIPT_PATH)
+APEX_SMOKE = importlib.util.module_from_spec(APEX_SPEC)
+APEX_SPEC.loader.exec_module(APEX_SMOKE)
+
 
 class FramingTests(unittest.TestCase):
     def test_read_message_consumes_a_frame_already_in_python_buffer(self):
+        self.assert_buffered_frame_is_consumed(SMOKE)
+
+    def test_apex_read_message_consumes_a_frame_already_in_python_buffer(self):
+        self.assert_buffered_frame_is_consumed(APEX_SMOKE)
+
+    def assert_buffered_frame_is_consumed(self, smoke_module):
         payload = {"jsonrpc": "2.0", "id": 1, "result": {}}
         body = json.dumps(payload, separators=(",", ":")).encode("utf-8")
         read_fd, write_fd = os.pipe()
@@ -23,7 +34,7 @@ class FramingTests(unittest.TestCase):
         try:
             os.write(write_fd, f"Content-Length: {len(body)}\r\n\r\n".encode("ascii") + body)
 
-            self.assertEqual(SMOKE.read_message(stream, 0.05), payload)
+            self.assertEqual(smoke_module.read_message(stream, 0.05), payload)
         finally:
             os.close(write_fd)
             stream.close()
