@@ -3,6 +3,8 @@ use zed_extension_api as zed;
 use zed_extension_api::serde_json;
 use zed_extension_api::{DownloadedFileType, LanguageServerInstallationStatus};
 
+mod visualforce;
+
 const APEX_LSP_ID: &str = "apex-language-server";
 const LWC_LSP_ID: &str = "lwc-language-server";
 const LWC_LSP_PACKAGE_NAME: &str = "@salesforce/lwc-language-server";
@@ -56,6 +58,9 @@ impl zed::Extension for SalesforceExtension {
         match language_server_id.as_ref() {
             APEX_LSP_ID => apex_language_server_command(language_server_id, worktree),
             LWC_LSP_ID => lwc_language_server_command(language_server_id, worktree),
+            visualforce::VISUALFORCE_LSP_ID => {
+                visualforce::language_server_command(language_server_id, worktree)
+            }
             _ => Err(format!("Unknown language server id: {language_server_id}")),
         }
     }
@@ -65,8 +70,12 @@ impl zed::Extension for SalesforceExtension {
         language_server_id: &zed::LanguageServerId,
         worktree: &zed::Worktree,
     ) -> zed::Result<Option<serde_json::Value>> {
-        if language_server_id.as_ref() != APEX_LSP_ID {
-            return Ok(None);
+        match language_server_id.as_ref() {
+            visualforce::VISUALFORCE_LSP_ID => {
+                return Ok(Some(visualforce::initialization_options()));
+            }
+            APEX_LSP_ID => {}
+            _ => return Ok(None),
         }
         let lsp_settings =
             zed::settings::LspSettings::for_worktree(APEX_LSP_ID, worktree).unwrap_or_default();
