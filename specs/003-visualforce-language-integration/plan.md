@@ -77,8 +77,8 @@
 **Interfaces:**
 - Produces: fresh build/test evidence, pushed commits, and a PR that closes issue #19 only after grammar and runtime are both wired.
 
-- [ ] Run formatting, host and wasm checks, Rust tests, the new integration test, Visualforce LSP smoke twice, and its corruption mode.
-- [ ] Run existing Apex, LWC, and Tree-sitter regression tests plus TOML validation.
-- [ ] Confirm the server is attached only to `Visualforce`, both suffixes resolve through the new language, no binary/cache is tracked, and the version is unchanged.
-- [ ] Load/build the development extension in Zed where possible and gather language/LSP evidence from the fixture.
+- [x] Run formatting, host and wasm checks, Rust tests, the new integration test, Visualforce LSP smoke twice, and its corruption mode.
+- [x] Run existing Apex, LWC, and Tree-sitter regression tests plus TOML validation.
+- [x] Confirm the server is attached only to `Visualforce`, both suffixes resolve through the new language, no binary/cache is tracked, and the version is unchanged.
+- [x] Load/build the development extension in Zed where possible and gather language/LSP evidence from the fixture.
 - [ ] Apply the code-review checklist inline, commit with required trailers, push, and update PR #20 to `Closes #19` without publishing a release.
