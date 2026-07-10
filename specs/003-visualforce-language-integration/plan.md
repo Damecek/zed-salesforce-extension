@@ -30,8 +30,8 @@
 - Consumes: `extension.toml`, `languages/visualforce/**`, local fixtures, and an overrideable `.cache/tree-sitter-visualforce-integration` checkout.
 - Produces: one deterministic command that validates manifest wiring, file associations, parsing, and query compilation.
 
-- [ ] Implement assertions for grammar repository/revision, server registration/language id, config suffixes, fixture presence, clean parsing, and all query files.
-- [ ] Run `rtk python3 scripts/test-visualforce-integration.py` and confirm it fails because `[grammars.visualforce]` and the language directory do not exist.
+- [x] Implement assertions for grammar repository/revision, server registration/language id, config suffixes, fixture presence, clean parsing, and all query files.
+- [x] Run `rtk python3 scripts/test-visualforce-integration.py` and confirm it fails because `[grammars.visualforce]` and the language directory do not exist.
 
 ### Task 2: Add the Visualforce language and server registration
 
@@ -48,10 +48,10 @@
 **Interfaces:**
 - Produces: Zed language name `Visualforce`, grammar name `visualforce`, suffixes `page`/`component`, and one manifest server binding to protocol id `visualforce`.
 
-- [ ] Add the grammar and server manifest records with the exact pinned values.
-- [ ] Add HTML-compatible language ergonomics and upstream Visualforce highlight/injection/indent/fold queries.
-- [ ] Add a component fixture containing nested `apex:*`/`c:*` markup, `{!...}` expressions, CSS, and JavaScript.
-- [ ] Run `rtk python3 scripts/test-visualforce-integration.py` and confirm manifest, parser, and query checks pass.
+- [x] Add the grammar and server manifest records with the exact pinned values.
+- [x] Add HTML-compatible language ergonomics and upstream Visualforce highlight/injection/indent/fold queries.
+- [x] Add a component fixture containing nested `apex:*`/`c:*` markup, `{!...}` expressions, CSS, and JavaScript.
+- [x] Run `rtk python3 scripts/test-visualforce-integration.py` and confirm manifest, parser, and query checks pass.
 
 ### Task 3: Document active support
 

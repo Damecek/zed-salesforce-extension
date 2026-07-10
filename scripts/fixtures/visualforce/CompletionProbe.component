@@ -1,0 +1,19 @@
+<apex:component controller="AccountBadgeController">
+    <apex:attribute name="account" type="Account" required="true" description="{!label}" />
+    <apex:outputPanel layout="block" styleClass="account-badge" rendered="{!NOT(ISBLANK(account.Id))}">
+        <c:accountBadge account="{!account}" label="{!HTMLENCODE(account.Name)}" />
+        <apex:outputText value="{!account.Industry}" />
+    </apex:outputPanel>
+
+    <style>
+        .account-badge {
+            border-color: {!theme.borderColor};
+            display: flex;
+        }
+    </style>
+
+    <script>
+        const accountLabel = '{!JSENCODE(account.Name)}';
+        document.querySelector('.account-badge').dataset.label = accountLabel;
+    </script>
+</apex:component>
