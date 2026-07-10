@@ -81,4 +81,4 @@
 - [x] Run existing Apex, LWC, and Tree-sitter regression tests plus TOML validation.
 - [x] Confirm the server is attached only to `Visualforce`, both suffixes resolve through the new language, no binary/cache is tracked, and the version is unchanged.
 - [x] Load/build the development extension in Zed where possible and gather language/LSP evidence from the fixture.
-- [ ] Apply the code-review checklist inline, commit with required trailers, push, and update PR #20 to `Closes #19` without publishing a release.
+- [x] Apply the code-review checklist inline, commit with required trailers, push, and update PR #20 to `Closes #19` without publishing a release.
