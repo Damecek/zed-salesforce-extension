@@ -1,15 +1,15 @@
 (element
-  (start_tag) @indent.begin
-  (end_tag) @indent.end)
+  (start_tag)
+  (end_tag) @end) @indent
 
 (script_element
-  (start_tag) @indent.begin
-  (end_tag) @indent.end)
+  (start_tag)
+  (end_tag) @end) @indent
 
 (style_element
-  (start_tag) @indent.begin
-  (end_tag) @indent.end)
+  (start_tag)
+  (end_tag) @end) @indent
 
 (argument_list
-  "(" @indent.begin
-  ")" @indent.end)
+  "("
+  ")" @end) @indent

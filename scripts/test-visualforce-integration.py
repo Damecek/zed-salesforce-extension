@@ -77,6 +77,14 @@ def assert_language_definition(repo_root):
     suffixes = config.get("path_suffixes", [])
     if set(suffixes) != {"page", "component"} or len(suffixes) != 2:
         raise RuntimeError(f"Visualforce suffixes must be page/component: {suffixes}")
+
+    indents = (language_dir / "indents.scm").read_text(encoding="utf-8")
+    if "@indent.begin" in indents or "@indent.end" in indents:
+        raise RuntimeError(
+            "Visualforce indents use upstream captures; Zed requires @indent with @end"
+        )
+    if "@indent" not in indents or "@end" not in indents:
+        raise RuntimeError("Visualforce indents must contain Zed @indent and @end captures")
     return language_dir
 
 
