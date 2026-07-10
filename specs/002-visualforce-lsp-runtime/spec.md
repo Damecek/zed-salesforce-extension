@@ -2,7 +2,7 @@
 
 ## Status and scope
 
-This design is approved by the implementation assignment for GitHub issue #19. It delivers reusable Visualforce language-server installation and launch groundwork without making Visualforce user-visible. It deliberately does not add a Visualforce Tree-sitter grammar, language directory, language registration, HTML attachment, extension version bump, or release.
+This design covers the first, runtime-only phase of GitHub issue #19. That phase deliberately omitted grammar and language registration. The follow-up integration in `specs/003-visualforce-language-integration/` now makes the verified runtime user-visible through the real public grammar without attaching it to HTML or publishing a release.
 
 ## Distribution decision
 
@@ -33,7 +33,7 @@ The command builder uses `zed::node_binary_path()`, the verified JavaScript path
 {"embeddedLanguages":{"css":true,"javascript":true}}
 ```
 
-`src/lib.rs` recognizes the stable server id and delegates to this module, but `extension.toml` does not register it. That dead-but-tested seam lets the later grammar integration pin the real `Damecek/tree-sitter-visualforce` revision, add `languages/visualforce/**`, and register this server for the new `Visualforce` language without changing installation behavior.
+`src/lib.rs` recognizes the stable server id and delegates to this module. The completed follow-up integration registers it only for `Visualforce`; installation behavior remains isolated in this module.
 
 ## Testing design
 
@@ -46,9 +46,9 @@ The fixture is a realistic `.page` file containing nested `apex:*` tags, `{!...}
 ## What changed / why / how to verify
 
 - **What:** add a pinned, integrity-checked Visualforce LSP runtime seam plus unit and standalone protocol tests.
-- **Why:** Salesforce distributes the runnable server in its official VSIX rather than public npm packages, while the real Visualforce Tree-sitter grammar is being developed separately.
+- **Why:** Salesforce distributes the runnable server in its official VSIX rather than public npm packages. The separately developed Visualforce grammar is now integrated by the follow-up phase.
 - **How:** run `rtk cargo test`, then run `rtk python3 scripts/test-visualforce-lsp-smoke.py` twice and `rtk python3 scripts/test-visualforce-lsp-smoke.py --expect-corrupt-bundle-failure`. Complete verification also includes formatting, compilation, existing Apex/LWC smoke tests, TOML parsing, and diff checks.
 
-## Remaining integration dependency
+## Completed integration dependency
 
-Activation depends on a real public revision of `https://github.com/Damecek/tree-sitter-visualforce`. A later change must pin that revision, add the actual `languages/visualforce/**` files, and register `visualforce-language-server` for `Visualforce` in `extension.toml`. No placeholder repository, grammar, mapping, or registration is acceptable.
+The follow-up phase pins `https://github.com/Damecek/tree-sitter-visualforce` at `88d24e807898f294e9e7d575509378ba352ee297`, adds `languages/visualforce/**`, and registers `visualforce-language-server` only for `Visualforce`. See `specs/003-visualforce-language-integration/spec.md`.

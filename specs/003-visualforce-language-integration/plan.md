@@ -64,9 +64,9 @@
 - Consumes: the implemented manifest/language behavior and verified test commands.
 - Produces: accurate user-facing setup, architecture, verification, and capability statements.
 
-- [ ] Update the project summary and Visualforce section to state that `.page`/`.component` support is active.
-- [ ] Preserve the official VSIX URL and both hashes, add the pinned grammar revision, and document the integration smoke command.
-- [ ] Replace the old remaining-dependency wording with the exact completed integration.
+- [x] Update the project summary and Visualforce section to state that `.page`/`.component` support is active.
+- [x] Preserve the official VSIX URL and both hashes, add the pinned grammar revision, and document the integration smoke command.
+- [x] Replace the old remaining-dependency wording with the exact completed integration.
 
 ### Task 4: Verify and publish the completed integration
 

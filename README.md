@@ -1,12 +1,12 @@
 # zed-salesforce-extension
 
-Salesforce DX language support for the Zed editor. Apex is backed by [`aer`](https://github.com/octoberswimmer/aer-dist/) (default) or Salesforce's Java-based Apex Language Server (`apex-jorje-lsp.jar`, opt-in). LWC HTML/JavaScript support is backed by Salesforce's `@salesforce/lwc-language-server`.
+Salesforce DX language support for the Zed editor. Apex is backed by [`aer`](https://github.com/octoberswimmer/aer-dist/) (default) or Salesforce's Java-based Apex Language Server (`apex-jorje-lsp.jar`, opt-in). LWC HTML/JavaScript support is backed by Salesforce's `@salesforce/lwc-language-server`, and Visualforce uses a dedicated Tree-sitter grammar plus Salesforce's official Visualforce language server.
 
 ## Project Goal
 
 Build a **Zed extension** that enables Salesforce DX development with a practical MVP:
 
-- Salesforce source files are recognized in Zed (current: Apex, SOQL/SOSL/logs, and LWC HTML/JavaScript via Zed's built-in languages).
+- Salesforce source files are recognized in Zed (current: Apex, SOQL/SOSL/logs, LWC HTML/JavaScript via Zed's built-in languages, and Visualforce `.page`/`.component`).
 - Basic syntax highlighting works (comments vs code, keywords, strings, etc.).
 - Apex Language Server (LSP) starts successfully for Apex files.
 - Core LSP features are available where the active backend supports them (at minimum diagnostics and completion).
@@ -23,6 +23,8 @@ Primary references for this architecture:
   https://zed.dev/docs/extensions/languages
 - Salesforce VS Code extension source (upstream):
   https://github.com/forcedotcom/salesforcedx-vscode.git
+- Visualforce Tree-sitter grammar:
+  https://github.com/Damecek/tree-sitter-visualforce
 - Key Apex LSP bootstrap file (upstream path):
   `packages/salesforcedx-vscode-apex/src/languageServer.ts`
 - Official Salesforce Apex Language Server docs:
@@ -122,16 +124,20 @@ the install failure in the language server startup error. Users with restricted
 extension capabilities need to allow npm installation for
 `@salesforce/lwc-language-server`.
 
-## Visualforce language server groundwork (inactive)
+## Visualforce language support
 
-The repository includes reusable Visualforce language-server runtime code, but
-Visualforce support is intentionally **not active or user-visible yet**. There is
-no Visualforce language, grammar, file association, or language-server entry in
-`extension.toml` until the real external Tree-sitter grammar is ready.
+Zed recognizes `.page` and `.component` files as the dedicated `Visualforce`
+language. Parsing and syntax highlighting use
+[`Damecek/tree-sitter-visualforce`](https://github.com/Damecek/tree-sitter-visualforce)
+pinned at commit `88d24e807898f294e9e7d575509378ba352ee297` (release `v0.1.0`).
+The grammar handles Visualforce markup and `{!...}` expressions structurally;
+language queries provide highlighting, indentation, folding, bracket behavior,
+and embedded JavaScript/CSS injections for script/style blocks and matching
+inline attributes.
 
 Salesforce's internal Visualforce language-server packages are not published on
 npm, so this extension does not attempt an npm install or a runtime source build.
-Instead, the staged runtime uses Salesforce's official Visualforce VSIX from
+Instead, the extension uses Salesforce's official Visualforce VSIX from
 release [`v67.4.0`](https://github.com/forcedotcom/salesforcedx-vscode/releases/tag/v67.4.0):
 
 - VSIX URL: `https://github.com/forcedotcom/salesforcedx-vscode/releases/download/v67.4.0/salesforcedx-vscode-visualforce-67.4.0.vsix`
@@ -139,8 +145,8 @@ release [`v67.4.0`](https://github.com/forcedotcom/salesforcedx-vscode/releases/
 - extracted entry point: `extension/dist/visualforceServer.js`
 - extracted server SHA-256: `37f6808e5e4bd360f7c7f219fd2d71cc8d7ce22688b271c1a4ae5020bd85bb3f`
 
-When the server is registered in a later integration change, Zed will extract
-the pinned VSIX into the extension-local versioned cache at
+On the first Visualforce language-server start, Zed extracts the pinned VSIX
+into the extension-local versioned cache at
 `lsp/visualforce-language-server/v67.4.0/`. The launcher hashes the extracted
 JavaScript before every execution. A valid cache is reused; a missing or invalid
 bundle gets one clean download/extraction attempt after removing only that
@@ -168,12 +174,15 @@ directory. `--cache-dir`, `--vsix-url`, and `--node` (or the corresponding
 `VISUALFORCE_LSP_NODE` environment variables) make offline and repeated runs
 controllable.
 
-Activation has one explicit external dependency: a real public revision of
-[`Damecek/tree-sitter-visualforce`](https://github.com/Damecek/tree-sitter-visualforce).
-The integration change must pin that revision, add the real
-`languages/visualforce/**` files, and register `visualforce-language-server` for
-the new `Visualforce` language. It must not use a placeholder grammar or attach
-the server globally to HTML.
+The Zed-facing integration test verifies the manifest wiring, both file suffixes,
+the exact grammar revision, page/component parsing, and every shipped query:
+
+```bash
+rtk python3 scripts/test-visualforce-integration.py
+```
+
+`visualforce-language-server` is registered only for `Visualforce`; it is not
+attached globally to HTML.
 
 ## Apex formatting with Prettier
 
