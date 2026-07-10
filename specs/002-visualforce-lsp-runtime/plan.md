@@ -83,5 +83,5 @@
 - [x] Parse `extension.toml` and all language TOML files with Python `tomllib`.
 - [x] Run `rtk git diff --check`, inspect `rtk git diff`, and prove no `languages/visualforce`, `[grammars.visualforce]`, HTML mapping/attachment, downloaded binary, version bump, or unrelated refactor exists.
 - [x] Apply the `superpowers:requesting-code-review` checklist inline against the base SHA; fix all critical and important findings and re-run affected verification.
-- [ ] Create coherent commits with the required trailer, rerun fresh completion verification, and confirm `rtk git status --short` is empty.
-- [ ] Push `feat/visualforce-lsp-runtime`, open a PR whose body says `Refs #19`, names `Damecek/tree-sitter-visualforce` as the remaining dependency, and does not publish or close anything.
+- [x] Create coherent commits with the required trailer, rerun fresh completion verification, and confirm `rtk git status --short` is empty.
+- [x] Push `feat/visualforce-lsp-runtime`, open a PR whose body says `Refs #19`, names `Damecek/tree-sitter-visualforce` as the remaining dependency, and does not publish or close anything.
