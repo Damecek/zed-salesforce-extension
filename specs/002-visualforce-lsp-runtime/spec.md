@@ -51,4 +51,10 @@ The fixture is a realistic `.page` file containing nested `apex:*` tags, `{!...}
 
 ## Completed integration dependency
 
-The follow-up phase pins `https://github.com/Damecek/tree-sitter-visualforce` at `88d24e807898f294e9e7d575509378ba352ee297`, adds `languages/visualforce/**`, and registers `visualforce-language-server` only for `Visualforce`. See `specs/003-visualforce-language-integration/spec.md`.
+The initial follow-up phase pinned `https://github.com/Damecek/tree-sitter-visualforce`
+at v0.1.0 (`88d24e807898f294e9e7d575509378ba352ee297`), added
+`languages/visualforce/**`, and registered `visualforce-language-server` only for
+`Visualforce`; that chronology remains in
+`specs/003-visualforce-language-integration/spec.md`. The delivered integration
+now pins v0.1.1 (`b1f026749107d549e72b8cef841cfd3ae9cf8240`) as recorded in
+`specs/004-visualforce-tree-sitter-v0.1.1/spec.md`.

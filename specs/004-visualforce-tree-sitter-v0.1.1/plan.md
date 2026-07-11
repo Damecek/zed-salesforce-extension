@@ -6,7 +6,9 @@
 
 **Architecture:** `extension.toml` remains the runtime source of the grammar pin, while `scripts/test-visualforce-integration.py` independently enforces the same revision and validates the language queries against committed fixtures. Upstream query files form the baseline; Zed-only captures and the local bracket query remain clearly scoped editor adaptations.
 
-**Tech Stack:** Zed extension TOML, Tree-sitter Visualforce `b1f026749107d549e72b8cef841cfd3ae9cf8240`, Scheme query files, Python 3 standard library, Tree-sitter CLI 0.26.10, Node.js/npm, Rust 2021.
+**Tech Stack:** Zed extension TOML, Tree-sitter Visualforce `b1f026749107d549e72b8cef841cfd3ae9cf8240`, Scheme query files, Python 3.10+ (`tomli` from `requirements-dev.txt` before Python 3.11), Tree-sitter CLI 0.26.10, Node.js/npm, Rust 2021.
+
+**Verification prerequisite:** run `rtk python3 -m pip install -r requirements-dev.txt` before the documented Python commands.
 
 ## Global Constraints
 

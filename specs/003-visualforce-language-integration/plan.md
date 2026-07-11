@@ -6,7 +6,9 @@
 
 **Architecture:** Pin the immutable grammar commit in the Zed manifest, add one dedicated Visualforce language definition with upstream-derived queries, and register the existing runtime only for that language. A standalone integration test validates manifest wiring, file associations, parser behavior, and all shipped queries before real LSP and editor validation.
 
-**Tech Stack:** Zed extension manifest/language configuration, Tree-sitter Visualforce `88d24e807898f294e9e7d575509378ba352ee297`, Python 3 standard library, Node.js, Rust 2021.
+**Tech Stack:** Zed extension manifest/language configuration, Tree-sitter Visualforce `88d24e807898f294e9e7d575509378ba352ee297`, Python 3.10+ (`tomli` from `requirements-dev.txt` before Python 3.11), Node.js, Rust 2021.
+
+**Current verification prerequisite:** run `rtk python3 -m pip install -r requirements-dev.txt` before the documented Python commands. Spec 004 supersedes this plan's delivered v0.1.0 grammar pin with v0.1.1 while preserving this completed chronology.
 
 ## Global Constraints
 

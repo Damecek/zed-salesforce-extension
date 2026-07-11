@@ -175,9 +175,14 @@ directory. `--cache-dir`, `--vsix-url`, and `--node` (or the corresponding
 controllable.
 
 The Zed-facing integration test verifies the manifest wiring, both file suffixes,
-the exact grammar revision, page/component parsing, and every shipped query:
+the exact grammar revision, runtime/smoke artifact identity, page/component
+parsing, and every shipped query. Repository Python checks support Python 3.10+
+and use the pinned `tomli` backport only on Python versions before 3.11:
 
 ```bash
+rtk python3 -m pip install -r requirements-dev.txt
+rtk python3 scripts/test-python-baseline.py
+rtk python3 scripts/test-visualforce-lsp-framing.py
 rtk python3 scripts/test-visualforce-integration.py
 ```
 

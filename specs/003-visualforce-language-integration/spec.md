@@ -6,7 +6,11 @@ Turn the verified but inactive Visualforce language-server runtime into end-to-e
 
 ## Pinned grammar
 
-Use `https://github.com/Damecek/tree-sitter-visualforce` at full commit `88d24e807898f294e9e7d575509378ba352ee297`. The annotated `v0.1.0` tag dereferences to this commit and upstream CI is green. Pinning the immutable commit matches the existing grammar policy in `extension.toml`.
+This phase originally selected `https://github.com/Damecek/tree-sitter-visualforce`
+at full commit `88d24e807898f294e9e7d575509378ba352ee297` (v0.1.0). The later
+`specs/004-visualforce-tree-sitter-v0.1.1/` update supersedes that delivered pin
+with `b1f026749107d549e72b8cef841cfd3ae9cf8240` (v0.1.1), while this document
+preserves the original integration decision and chronology.
 
 ## Approaches considered
 

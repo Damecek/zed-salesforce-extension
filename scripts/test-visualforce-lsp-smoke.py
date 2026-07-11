@@ -3,9 +3,7 @@
 
 import argparse
 import hashlib
-import json
 import os
-import select
 import shutil
 import subprocess
 import sys
@@ -13,7 +11,8 @@ import tempfile
 import urllib.request
 import zipfile
 from pathlib import Path
-from urllib.parse import quote
+
+from lsp_test_protocol import file_uri, read_message, write_message
 
 
 RELEASE = "v67.4.0"
@@ -130,49 +129,6 @@ def ensure_server(archive_path, version_dir):
     server_path = extract_verified_server(archive_path, version_dir)
     print(f"Extracted and verified server SHA-256 {SERVER_SHA256}")
     return server_path
-
-
-def file_uri(path):
-    return "file://" + quote(str(Path(path).resolve()), safe="/")
-
-
-def write_message(stream, payload):
-    body = json.dumps(payload, separators=(",", ":")).encode("utf-8")
-    stream.write(f"Content-Length: {len(body)}\r\n\r\n".encode("ascii"))
-    stream.write(body)
-    stream.flush()
-
-
-def wait_readable(stream, timeout_seconds):
-    ready, _, _ = select.select([stream], [], [], timeout_seconds)
-    return bool(ready)
-
-
-def read_message(stream, timeout_seconds):
-    if not wait_readable(stream, timeout_seconds):
-        return None
-    headers = {}
-    while True:
-        line = stream.readline()
-        if not line:
-            return None
-        if line in (b"\r\n", b"\n"):
-            break
-        decoded = line.decode("ascii", errors="replace").strip()
-        if ":" in decoded:
-            key, value = decoded.split(":", 1)
-            headers[key.strip().lower()] = value.strip()
-
-    content_length = headers.get("content-length")
-    if content_length is None:
-        raise RuntimeError(f"LSP response omitted Content-Length: {headers}")
-    length = int(content_length)
-    body = stream.read(length)
-    if len(body) != length:
-        raise RuntimeError(
-            f"LSP response body ended early: expected {length} bytes, received {len(body)}"
-        )
-    return json.loads(body.decode("utf-8"))
 
 
 def respond_to_server_request(proc, message):

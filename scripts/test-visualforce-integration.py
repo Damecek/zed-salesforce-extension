@@ -1,13 +1,20 @@
 #!/usr/bin/env python3
 """Validate Visualforce grammar, language, and server integration for Zed."""
 
+import importlib.util
 import os
+import re
 import subprocess
 import sys
-import tomllib
 from pathlib import Path
 
+try:
+    import tomllib
+except ModuleNotFoundError:  # Python 3.10 compatibility
+    import tomli as tomllib
 
+
+MINIMUM_PYTHON = (3, 10)
 GRAMMAR_REPOSITORY = "https://github.com/Damecek/tree-sitter-visualforce"
 GRAMMAR_REVISION = "b1f026749107d549e72b8cef841cfd3ae9cf8240"
 TREE_SITTER_CLI = "tree-sitter-cli@0.26.10"
@@ -19,6 +26,11 @@ LANGUAGE_FILES = (
     "indents.scm",
     "injections.scm",
 )
+
+
+def require_supported_python(version_info=sys.version_info):
+    if tuple(version_info[:2]) < MINIMUM_PYTHON:
+        raise RuntimeError("Visualforce integration tests require Python 3.10 or newer")
 
 
 def run(command, cwd=None):
@@ -86,6 +98,38 @@ def assert_language_definition(repo_root):
     if "@indent" not in indents or "@end" not in indents:
         raise RuntimeError("Visualforce indents must contain Zed @indent and @end captures")
     return language_dir
+
+
+def assert_visualforce_artifact_identity(repo_root):
+    smoke_path = repo_root / "scripts" / "test-visualforce-lsp-smoke.py"
+    spec = importlib.util.spec_from_file_location("visualforce_lsp_smoke", smoke_path)
+    smoke = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(smoke)
+
+    rust_source = (repo_root / "src" / "visualforce.rs").read_text(encoding="utf-8")
+    expected = {
+        "VISUALFORCE_LSP_RELEASE": smoke.RELEASE,
+        "VISUALFORCE_LSP_BUNDLE_SHA256": smoke.SERVER_SHA256,
+        "VISUALFORCE_LSP_DOWNLOAD_URL": smoke.VSIX_URL,
+        "VISUALFORCE_LSP_CACHE_REL_PATH": (
+            f"lsp/visualforce-language-server/{smoke.RELEASE}"
+        ),
+        "VISUALFORCE_LSP_SERVER_REL_PATH": smoke.SERVER_REL_PATH.as_posix(),
+    }
+    for constant, expected_value in expected.items():
+        match = re.search(
+            rf'const\s+{constant}:\s*&str\s*=\s*"([^"]+)"\s*;',
+            rust_source,
+            re.MULTILINE,
+        )
+        if match is None:
+            raise RuntimeError(f"src/visualforce.rs is missing string constant {constant}")
+        actual_value = match.group(1)
+        if actual_value != expected_value:
+            raise RuntimeError(
+                f"Visualforce artifact identity drift for {constant}: "
+                f"runtime={actual_value!r}; smoke={expected_value!r}"
+            )
 
 
 def ensure_grammar(repo_root):
@@ -163,9 +207,11 @@ def assert_queries_compile(grammar_dir, language_dir, fixtures):
 
 
 def main():
+    require_supported_python()
     repo_root = Path(__file__).resolve().parent.parent
     assert_manifest(repo_root)
     language_dir = assert_language_definition(repo_root)
+    assert_visualforce_artifact_identity(repo_root)
 
     fixtures = (
         repo_root / "scripts" / "fixtures" / "visualforce" / "CompletionProbe.page",
@@ -186,7 +232,8 @@ def main():
 
     print(
         "Visualforce integration test passed: manifest registration, page/component "
-        "associations, pinned grammar parsing, and all language queries are valid."
+        "associations, runtime artifact identity, pinned grammar parsing, and all "
+        "language queries are valid."
     )
 
 

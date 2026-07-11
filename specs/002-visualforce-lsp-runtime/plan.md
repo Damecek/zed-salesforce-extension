@@ -6,7 +6,9 @@
 
 **Architecture:** A dedicated Rust module owns pinned artifact metadata, versioned cache validation/repair, command creation, and initialization options. A separate Python smoke test validates the real VSIX and LSP protocol without changing existing Apex tooling or manifest activation.
 
-**Tech Stack:** Rust 2021, `zed_extension_api` 0.7, `sha2` 0.10, Python 3 standard library, Node.js, Cargo, GitHub CLI.
+**Tech Stack:** Rust 2021, `zed_extension_api` 0.7, `sha2` 0.10, Python 3.10+ (`tomli` compatibility dependency from `requirements-dev.txt` before Python 3.11), Node.js, Cargo, GitHub CLI.
+
+**Current verification prerequisite:** run `rtk python3 -m pip install -r requirements-dev.txt` before the documented Python checks. The original runtime smoke itself remains standard-library-only; this prerequisite also covers the later integrated grammar gate.
 
 ## Global Constraints
 
