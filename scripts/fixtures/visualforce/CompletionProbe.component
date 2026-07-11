@@ -5,6 +5,8 @@
         <apex:outputText value="{!account.Industry}" />
     </apex:outputPanel>
 
+    <pre><code>IF (VALUE(X) > 0, IMAGE("/asset?id=Y", "*", 1, 1), "")</code></pre>
+
     <style>
         .account-badge {
             border-color: {!theme.borderColor};

@@ -9,7 +9,7 @@ from pathlib import Path
 
 
 GRAMMAR_REPOSITORY = "https://github.com/Damecek/tree-sitter-visualforce"
-GRAMMAR_REVISION = "88d24e807898f294e9e7d575509378ba352ee297"
+GRAMMAR_REVISION = "b1f026749107d549e72b8cef841cfd3ae9cf8240"
 TREE_SITTER_CLI = "tree-sitter-cli@0.26.10"
 LANGUAGE_FILES = (
     "brackets.scm",

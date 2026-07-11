@@ -4,6 +4,10 @@
             <apex:pageMessages />
             <apex:pageBlockTable value="{!accounts}" var="account">
                 <apex:column value="{!account.Name}" />
+                <apex:column value="{!accounts[0].Name}" />
+                <apex:column>
+                    <apex:outputText value="As of {0,date,dd/MM/yyyy}: {!accounts[0].Name}" />
+                </apex:column>
                 <apex:column headerValue="Action">
                     <apex:commandLink value="Select" action="{!selectAccount}">
                         <apex:param name="accountId" value="{!account.Id}" assignTo="{!selectedAccountId}" />
