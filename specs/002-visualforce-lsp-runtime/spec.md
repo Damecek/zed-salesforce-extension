@@ -27,7 +27,7 @@ The internal upstream npm packages are not public, so runtime npm installation c
 
 On launch, the module reports `CheckingForUpdate` and hashes an existing bundle. A matching bundle is reused without download. A missing or mismatched bundle causes exactly one repair attempt: remove only `lsp/visualforce-language-server/v67.4.0`, report `Downloading`, and ask `zed::download_file` to extract the pinned VSIX as `DownloadedFileType::Zip` into that version directory. The extracted JavaScript is hashed again before execution. A second mismatch fails with an error containing the expected and actual hashes. Failures are reported through `LanguageServerInstallationStatus::Failed`; success clears the status with `None`.
 
-The command builder uses `zed::node_binary_path()`, the verified JavaScript path, `--stdio`, and the worktree shell environment. Initialization options are exactly:
+The command builder uses `zed::node_binary_path()`, a materialized bundled protocol shim, the verified JavaScript path, `--stdio`, and the worktree shell environment. The shim preserves `languageId = "visualforce"` for Visualforce-specific completion while mirroring document lifecycle notifications to an internal `html` shadow URI for the embedded CSS/JavaScript validation that v67.4.0 otherwise suppresses. Only shadow diagnostics are mapped back to the real URI. Initialization options are exactly:
 
 ```json
 {"embeddedLanguages":{"css":true,"javascript":true}}
@@ -37,9 +37,9 @@ The command builder uses `zed::node_binary_path()`, the verified JavaScript path
 
 ## Testing design
 
-Rust unit tests cover deterministic path selection, SHA-256 verification, valid-cache reuse, corrupt-cache repair with one downloader call, post-download mismatch errors, command construction, and initialization options. Tests inject a small download closure so they exercise real filesystem behavior while avoiding Zed host calls.
+Rust unit tests cover deterministic path selection, SHA-256 verification, valid-cache reuse, corrupt-cache repair with one downloader call, post-download mismatch errors, wrapper materialization, command construction, and initialization options. Tests inject a small download closure so they exercise real filesystem behavior while avoiding Zed host calls.
 
-`scripts/test-visualforce-lsp-smoke.py` independently verifies the pinned VSIX hash, extracts it into an ignored or caller-supplied cache, verifies the server hash, launches Node with `visualforceServer.js --stdio`, performs initialize/initialized/open/completion/shutdown/exit, and requires at least one completion label beginning with `apex:`. Its cache and URL are overrideable. A checksum-negative mode corrupts the extracted bundle and asserts deterministic expected/actual hash failure. Running the normal smoke twice proves validated cache reuse.
+`scripts/test-visualforce-lsp-smoke.py` independently verifies the pinned VSIX hash, extracts it into an ignored or caller-supplied cache, verifies the server hash, launches the shim and `visualforceServer.js --stdio`, performs initialize/initialized/open/completion/shutdown/exit, and requires at least one completion label beginning with `apex:`. `scripts/test-visualforce-lsp-diagnostics.py` opens a valid document and changes it to invalid embedded CSS/JavaScript, requiring both supported diagnostics on the real Visualforce URI. The cache and URL are overrideable. A checksum-negative mode corrupts the extracted bundle and asserts deterministic expected/actual hash failure. Running the normal smoke twice proves validated cache reuse.
 
 The fixture is a realistic `.page` file containing nested `apex:*` tags, `{!...}` expressions, CSS, JavaScript, and a marked completion probe.
 
@@ -47,7 +47,7 @@ The fixture is a realistic `.page` file containing nested `apex:*` tags, `{!...}
 
 - **What:** add a pinned, integrity-checked Visualforce LSP runtime seam plus unit and standalone protocol tests.
 - **Why:** Salesforce distributes the runnable server in its official VSIX rather than public npm packages. The separately developed Visualforce grammar is now integrated by the follow-up phase.
-- **How:** run `rtk cargo test`, then run `rtk python3 scripts/test-visualforce-lsp-smoke.py` twice and `rtk python3 scripts/test-visualforce-lsp-smoke.py --expect-corrupt-bundle-failure`. Complete verification also includes formatting, compilation, existing Apex/LWC smoke tests, TOML parsing, and diff checks.
+- **How:** run `rtk cargo test`, then run `rtk python3 scripts/test-visualforce-lsp-smoke.py` twice, `rtk python3 scripts/test-visualforce-lsp-smoke.py --expect-corrupt-bundle-failure`, and `rtk python3 scripts/test-visualforce-lsp-diagnostics.py`. Complete verification also includes formatting, compilation, existing Apex/LWC smoke tests, TOML parsing, and diff checks.
 
 ## Completed integration dependency
 

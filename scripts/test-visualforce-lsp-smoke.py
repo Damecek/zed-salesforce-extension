@@ -26,6 +26,7 @@ SERVER_REL_PATH = Path("extension/dist/visualforceServer.js")
 SERVER_SHA256 = "37f6808e5e4bd360f7c7f219fd2d71cc8d7ce22688b271c1a4ae5020bd85bb3f"
 COMPLETION_MARKER = "<!-- VISUALFORCE_COMPLETION_PROBE -->"
 COMPLETION_PREFIX = "<apex:"
+WRAPPER_PATH = Path(__file__).with_name("visualforce-language-server-wrapper.js")
 
 
 class IntegrityError(RuntimeError):
@@ -177,11 +178,11 @@ def completion_items(result):
     return []
 
 
-def run_lsp_smoke(node, server_path, fixture_path, timeout_seconds):
+def run_lsp_smoke(node, wrapper_path, server_path, fixture_path, timeout_seconds):
     workspace = fixture_path.parent.resolve()
     stderr_file = tempfile.TemporaryFile()
     proc = subprocess.Popen(
-        [node, str(server_path), "--stdio"],
+        [node, str(wrapper_path), str(server_path), "--stdio"],
         cwd=workspace,
         stdin=subprocess.PIPE,
         stdout=subprocess.PIPE,
@@ -335,6 +336,8 @@ def main():
     fixture_path = repo_root / "scripts" / "fixtures" / "visualforce" / "CompletionProbe.page"
     if not fixture_path.is_file():
         raise SystemExit(f"Visualforce fixture is missing: {fixture_path}")
+    if not WRAPPER_PATH.is_file():
+        raise SystemExit(f"Visualforce diagnostic shim is missing: {WRAPPER_PATH}")
 
     try:
         archive_path = ensure_vsix(args.vsix_url, archive_path)
@@ -343,7 +346,7 @@ def main():
             return
         server_path = ensure_server(archive_path, version_dir)
         item_count, apex_labels = run_lsp_smoke(
-            args.node, server_path, fixture_path, args.timeout_seconds
+            args.node, WRAPPER_PATH, server_path, fixture_path, args.timeout_seconds
         )
     except Exception as error:
         raise SystemExit(str(error)) from error

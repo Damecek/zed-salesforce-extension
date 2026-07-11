@@ -152,8 +152,13 @@ JavaScript before every execution. A valid cache is reused; a missing or invalid
 bundle gets one clean download/extraction attempt after removing only that
 Visualforce version directory. A replacement with the wrong hash fails with an
 expected/actual integrity error. The command is Zed's Node.js runtime followed
-by the verified `visualforceServer.js` path and `--stdio`, with the worktree shell
-environment. Initialization enables embedded CSS and JavaScript support.
+by a bundled protocol shim, the verified `visualforceServer.js` path, and
+`--stdio`, with the worktree shell environment. The shim keeps the real document
+id `visualforce` for `apex:*` completion and mirrors document changes to an
+internal `html` shadow document because v67.4.0 gates embedded CSS/JavaScript
+validation on that id. Shadow diagnostics are mapped back to the real document;
+the dedicated Visualforce grammar and activation remain unchanged.
+Initialization enables embedded CSS and JavaScript support.
 
 The standalone smoke test independently verifies both the downloaded VSIX and
 the extracted server hashes. It then initializes the real server, opens
@@ -166,6 +171,7 @@ cold and warm caches, followed by its deterministic checksum-negative mode:
 rtk python3 scripts/test-visualforce-lsp-smoke.py
 rtk python3 scripts/test-visualforce-lsp-smoke.py
 rtk python3 scripts/test-visualforce-lsp-smoke.py --expect-corrupt-bundle-failure
+rtk python3 scripts/test-visualforce-lsp-diagnostics.py
 ```
 
 The test cache defaults to the ignored `.cache/visualforce-language-server/`

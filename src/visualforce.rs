@@ -12,6 +12,9 @@ const VISUALFORCE_LSP_BUNDLE_SHA256: &str =
 const VISUALFORCE_LSP_DOWNLOAD_URL: &str = "https://github.com/forcedotcom/salesforcedx-vscode/releases/download/v67.4.0/salesforcedx-vscode-visualforce-67.4.0.vsix";
 const VISUALFORCE_LSP_CACHE_REL_PATH: &str = "lsp/visualforce-language-server/v67.4.0";
 const VISUALFORCE_LSP_SERVER_REL_PATH: &str = "extension/dist/visualforceServer.js";
+const VISUALFORCE_LSP_WRAPPER_REL_PATH: &str = "scripts/visualforce-language-server-wrapper.js";
+const VISUALFORCE_LSP_WRAPPER_SOURCE: &str =
+    include_str!("../scripts/visualforce-language-server-wrapper.js");
 
 #[derive(Debug, PartialEq, Eq)]
 enum BundleVerification {
@@ -58,6 +61,8 @@ pub(crate) fn language_server_command(
         },
     )
     .map_err(|err| fail_installation(language_server_id, err))?;
+    let wrapper_path =
+        ensure_wrapper(&work_dir).map_err(|err| fail_installation(language_server_id, err))?;
 
     zed::set_language_server_installation_status(
         language_server_id,
@@ -66,6 +71,7 @@ pub(crate) fn language_server_command(
 
     Ok(build_command(
         node,
+        wrapper_path.to_string_lossy().into_owned(),
         server_path.to_string_lossy().into_owned(),
         worktree.shell_env(),
     ))
@@ -88,12 +94,44 @@ fn fail_installation(language_server_id: &zed::LanguageServerId, message: String
     message
 }
 
-fn build_command(node: String, server_path: String, env: zed::EnvVars) -> zed::Command {
+fn build_command(
+    node: String,
+    wrapper_path: String,
+    server_path: String,
+    env: zed::EnvVars,
+) -> zed::Command {
     zed::Command {
         command: node,
-        args: vec![server_path, "--stdio".to_string()],
+        args: vec![wrapper_path, server_path, "--stdio".to_string()],
         env,
     }
+}
+
+fn ensure_wrapper(work_dir: &Path) -> Result<PathBuf, String> {
+    let wrapper_path = work_dir.join(VISUALFORCE_LSP_WRAPPER_REL_PATH);
+    if let Some(parent) = wrapper_path.parent() {
+        fs::create_dir_all(parent).map_err(|err| {
+            format!(
+                "Could not create Visualforce language server wrapper directory {}: {err}",
+                parent.display()
+            )
+        })?;
+    }
+
+    let should_write = match fs::read_to_string(&wrapper_path) {
+        Ok(existing) => existing != VISUALFORCE_LSP_WRAPPER_SOURCE,
+        Err(_) => true,
+    };
+    if should_write {
+        fs::write(&wrapper_path, VISUALFORCE_LSP_WRAPPER_SOURCE).map_err(|err| {
+            format!(
+                "Could not write Visualforce language server wrapper {}: {err}",
+                wrapper_path.display()
+            )
+        })?;
+    }
+
+    Ok(wrapper_path)
 }
 
 fn bundle_path(work_dir: &Path) -> PathBuf {
@@ -202,9 +240,10 @@ fn sha256_file(path: &Path) -> Result<String, String> {
 #[cfg(test)]
 mod tests {
     use super::{
-        build_command, bundle_path, ensure_verified_bundle_with, initialization_options,
-        verify_bundle, BundleVerification, VISUALFORCE_LSP_CACHE_REL_PATH,
+        build_command, bundle_path, ensure_verified_bundle_with, ensure_wrapper,
+        initialization_options, verify_bundle, BundleVerification, VISUALFORCE_LSP_CACHE_REL_PATH,
         VISUALFORCE_LSP_DOWNLOAD_URL, VISUALFORCE_LSP_ID, VISUALFORCE_LSP_SERVER_REL_PATH,
+        VISUALFORCE_LSP_WRAPPER_REL_PATH, VISUALFORCE_LSP_WRAPPER_SOURCE,
     };
     use std::cell::Cell;
     use std::fs;
@@ -321,6 +360,7 @@ mod tests {
         let env = vec![("SHELL_VALUE".to_string(), "kept".to_string())];
         let command = build_command(
             "/zed/node".to_string(),
+            "/cache/scripts/visualforce-language-server-wrapper.js".to_string(),
             "/cache/extension/dist/visualforceServer.js".to_string(),
             env.clone(),
         );
@@ -330,11 +370,28 @@ mod tests {
         assert_eq!(
             command.args,
             vec![
+                "/cache/scripts/visualforce-language-server-wrapper.js".to_string(),
                 "/cache/extension/dist/visualforceServer.js".to_string(),
                 "--stdio".to_string()
             ]
         );
         assert_eq!(command.env, env);
+    }
+
+    #[test]
+    fn materializes_current_visualforce_diagnostic_wrapper() {
+        let root = temp_test_root("wrapper");
+        let wrapper_path = root.join(VISUALFORCE_LSP_WRAPPER_REL_PATH);
+        fs::create_dir_all(wrapper_path.parent().unwrap()).unwrap();
+        fs::write(&wrapper_path, "stale wrapper").unwrap();
+
+        assert_eq!(ensure_wrapper(&root).unwrap(), wrapper_path);
+        assert_eq!(
+            fs::read_to_string(&wrapper_path).unwrap(),
+            VISUALFORCE_LSP_WRAPPER_SOURCE
+        );
+
+        fs::remove_dir_all(root).ok();
     }
 
     #[test]
