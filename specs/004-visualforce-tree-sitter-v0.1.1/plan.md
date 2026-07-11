@@ -32,7 +32,7 @@
 - Consumes: `extension.toml` grammar entry and the upstream repository URL.
 - Produces: `GRAMMAR_REVISION = "b1f026749107d549e72b8cef841cfd3ae9cf8240"` plus page/component fixtures that exercise the release fixes.
 
-- [ ] **Step 1: Change the test-side grammar pin before the manifest pin**
+- [x] **Step 1: Change the test-side grammar pin before the manifest pin**
 
 In `scripts/test-visualforce-integration.py`, replace the revision constant with:
 
@@ -40,7 +40,7 @@ In `scripts/test-visualforce-integration.py`, replace the revision constant with
 GRAMMAR_REVISION = "b1f026749107d549e72b8cef841cfd3ae9cf8240"
 ```
 
-- [ ] **Step 2: Add v0.1.1 syntax to the page fixture**
+- [x] **Step 2: Add v0.1.1 syntax to the page fixture**
 
 Inside the existing `<apex:pageBlockTable>`, add a subscript expression and a quoted attribute containing literal message-format braces alongside a Visualforce expression:
 
@@ -53,7 +53,7 @@ Inside the existing `<apex:pageBlockTable>`, add a subscript expression and a qu
 
 Keep the incomplete `<apex:` completion probe unchanged so the existing expected recovery path remains covered.
 
-- [ ] **Step 3: Add formula-like literal text to the component fixture**
+- [x] **Step 3: Add formula-like literal text to the component fixture**
 
 Before the existing `<style>` element, add markup that must not consume the following embedded elements:
 
@@ -61,7 +61,7 @@ Before the existing `<style>` element, add markup that must not consume the foll
     <pre><code>IF (VALUE(X) > 0, IMAGE("/asset?id=Y", "*", 1, 1), "")</code></pre>
 ```
 
-- [ ] **Step 4: Run the integration test and verify the pin mismatch fails first**
+- [x] **Step 4: Run the integration test and verify the pin mismatch fails first**
 
 Run:
 
@@ -71,7 +71,7 @@ rtk python3 scripts/test-visualforce-integration.py
 
 Expected: FAIL containing `Unexpected Visualforce grammar revision` and showing the old manifest revision `88d24e807898f294e9e7d575509378ba352ee297`.
 
-- [ ] **Step 5: Commit the regression boundary**
+- [x] **Step 5: Commit the regression boundary**
 
 ```bash
 rtk git add scripts/test-visualforce-integration.py scripts/fixtures/visualforce/CompletionProbe.page scripts/fixtures/visualforce/CompletionProbe.component
@@ -94,7 +94,7 @@ rtk git commit -m $'Test Visualforce grammar v0.1.1 syntax\n\nCo-Authored-By: co
 - Consumes: upstream query files from commit `b1f026749107d549e72b8cef841cfd3ae9cf8240`.
 - Produces: a manifest pin that matches `GRAMMAR_REVISION` and Zed-compatible query files compiling against the new node types.
 
-- [ ] **Step 1: Update the manifest pin**
+- [x] **Step 1: Update the manifest pin**
 
 Set the Visualforce grammar entry to:
 
@@ -104,7 +104,7 @@ repository = "https://github.com/Damecek/tree-sitter-visualforce"
 rev = "b1f026749107d549e72b8cef841cfd3ae9cf8240"
 ```
 
-- [ ] **Step 2: Re-synchronize highlights with explicit Zed additions**
+- [x] **Step 2: Re-synchronize highlights with explicit Zed additions**
 
 Use upstream `queries/highlights.scm` verbatim as the baseline. Retain these additions in `languages/visualforce/highlights.scm` after the upstream tag-name captures and before upstream attribute captures:
 
@@ -127,7 +127,7 @@ Retain these additions after upstream entity highlighting and before expression 
 ] @punctuation.bracket.html
 ```
 
-- [ ] **Step 3: Re-synchronize injections and folds exactly**
+- [x] **Step 3: Re-synchronize injections and folds exactly**
 
 Replace `languages/visualforce/injections.scm` and `languages/visualforce/folds.scm` with the respective upstream `v0.1.1` query content. The expected semantic result is unchanged; verify this with:
 
@@ -137,7 +137,7 @@ rtk git diff -- languages/visualforce/injections.scm languages/visualforce/folds
 
 Expected: no semantic diff, or formatting-only changes that exactly match upstream.
 
-- [ ] **Step 4: Re-synchronize indents through the Zed capture adapter**
+- [x] **Step 4: Re-synchronize indents through the Zed capture adapter**
 
 Translate each upstream pattern into Zed captures, producing exactly:
 
@@ -159,7 +159,7 @@ Translate each upstream pattern into Zed captures, producing exactly:
   ")" @end) @indent
 ```
 
-- [ ] **Step 5: Verify the local bracket query is preserved**
+- [x] **Step 5: Verify the local bracket query is preserved**
 
 Run:
 
@@ -169,7 +169,7 @@ rtk git diff -- languages/visualforce/brackets.scm
 
 Expected: no output.
 
-- [ ] **Step 6: Run the focused integration test**
+- [x] **Step 6: Run the focused integration test**
 
 ```bash
 rtk python3 scripts/test-visualforce-integration.py
@@ -177,7 +177,7 @@ rtk python3 scripts/test-visualforce-integration.py
 
 Expected: PASS ending with `Visualforce integration test passed` and no unexpected parse `ERROR` nodes or query compilation errors.
 
-- [ ] **Step 7: Commit the grammar and query update**
+- [x] **Step 7: Commit the grammar and query update**
 
 ```bash
 rtk git add extension.toml languages/visualforce
@@ -198,7 +198,7 @@ rtk git commit -m $'Update Visualforce Tree-sitter to v0.1.1\n\nCo-Authored-By: 
 - Consumes: the completed manifest, fixtures, queries, and integration test from Tasks 1 and 2.
 - Produces: current public documentation and an evidence-backed completed implementation plan.
 
-- [ ] **Step 1: Update the README version statement**
+- [x] **Step 1: Update the README version statement**
 
 Replace the Visualforce grammar sentence with:
 
@@ -207,7 +207,7 @@ The grammar is pinned at commit
 `b1f026749107d549e72b8cef841cfd3ae9cf8240` (release `v0.1.1`).
 ```
 
-- [ ] **Step 2: Run upstream v0.1.1 grammar tests**
+- [x] **Step 2: Run upstream v0.1.1 grammar tests**
 
 ```bash
 rtk git -C .cache/tree-sitter-visualforce-integration checkout --detach b1f026749107d549e72b8cef841cfd3ae9cf8240
@@ -217,7 +217,7 @@ rtk npm --prefix .cache/tree-sitter-visualforce-integration test
 
 Expected: checkout reports detached `v0.1.1`; dependency installation succeeds; upstream corpus, fixture, query, harness, lint, format, and metadata checks all pass.
 
-- [ ] **Step 3: Run repository verification**
+- [x] **Step 3: Run repository verification**
 
 ```bash
 rtk python3 scripts/test-visualforce-integration.py
@@ -227,7 +227,7 @@ rtk git diff --check
 
 Expected: the Visualforce integration test passes, all Rust tests pass, and `git diff --check` prints no errors.
 
-- [ ] **Step 4: Review scope and record completed checks**
+- [x] **Step 4: Review scope and record completed checks**
 
 ```bash
 rtk git status --short
@@ -237,7 +237,7 @@ rtk git diff HEAD~2 -- extension.toml languages/visualforce scripts/test-visualf
 
 Expected: only the approved Visualforce grammar, query, fixture, test, README, and plan files differ; no Visualforce LSP runtime or file-association code changed. Mark each verified plan checkbox `[x]` only after its command succeeds.
 
-- [ ] **Step 5: Commit documentation and verification record**
+- [x] **Step 5: Commit documentation and verification record**
 
 ```bash
 rtk git add README.md specs/004-visualforce-tree-sitter-v0.1.1/plan.md

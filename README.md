@@ -129,7 +129,7 @@ extension capabilities need to allow npm installation for
 Zed recognizes `.page` and `.component` files as the dedicated `Visualforce`
 language. Parsing and syntax highlighting use
 [`Damecek/tree-sitter-visualforce`](https://github.com/Damecek/tree-sitter-visualforce)
-pinned at commit `88d24e807898f294e9e7d575509378ba352ee297` (release `v0.1.0`).
+pinned at commit `b1f026749107d549e72b8cef841cfd3ae9cf8240` (release `v0.1.1`).
 The grammar handles Visualforce markup and `{!...}` expressions structurally;
 language queries provide highlighting, indentation, folding, bracket behavior,
 and embedded JavaScript/CSS injections for script/style blocks and matching
