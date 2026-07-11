@@ -144,18 +144,38 @@ fn lwc_language_server_command(
 
 fn has_lwc_workspace_roots(worktree: &zed::Worktree) -> zed::Result<bool> {
     let root_path = worktree.root_path();
-    if let Ok(json) = worktree.read_text_file(LWC_CONFIG_FILE) {
-        return has_lwc_config_module_roots(&json);
+    let lwc_config = worktree.read_text_file(LWC_CONFIG_FILE).ok();
+    let sfdx_project = worktree.read_text_file(SFDX_PROJECT_FILE).ok();
+
+    has_lwc_workspace_roots_from_files(
+        Path::new(&root_path),
+        lwc_config.as_deref(),
+        sfdx_project.as_deref(),
+    )
+}
+
+fn has_lwc_workspace_roots_from_files(
+    root_path: &Path,
+    lwc_config: Option<&str>,
+    sfdx_project: Option<&str>,
+) -> zed::Result<bool> {
+    if let Some(json) = lwc_config {
+        if has_lwc_config_module_roots(json)? {
+            return Ok(true);
+        }
     }
 
-    if let Some(project) = read_sfdx_project(
-        worktree,
-        "Fix the file before starting the LWC language server.",
-    )? {
-        return Ok(project.has_package_directories());
+    if let Some(json) = sfdx_project {
+        let project = parse_sfdx_project(
+            json,
+            "Fix the file before starting the LWC language server.",
+        )?;
+        if project.has_package_directories() {
+            return Ok(true);
+        }
     }
 
-    Ok(has_lwc_fallback_root(Path::new(&root_path)))
+    Ok(has_lwc_fallback_root(root_path))
 }
 
 fn has_lwc_config_module_roots(json: &str) -> zed::Result<bool> {
@@ -644,7 +664,8 @@ fn value_to_u64(value: &serde_json::Value) -> Option<u64> {
 #[cfg(test)]
 mod tests {
     use super::{
-        has_lwc_fallback_root, lwc_config_module_dirs, normalize_source_path, parse_sfdx_project,
+        has_lwc_fallback_root, has_lwc_workspace_roots_from_files, lwc_config_module_dirs,
+        normalize_source_path, parse_sfdx_project,
     };
     use std::fs;
     use std::time::{SystemTime, UNIX_EPOCH};
@@ -719,6 +740,39 @@ mod tests {
         fs::write(cache_dir.join("custom-components.json"), "[]").unwrap();
 
         assert!(!has_lwc_fallback_root(&root));
+
+        fs::remove_dir_all(root).ok();
+    }
+
+    #[test]
+    fn lwc_workspace_roots_fall_back_after_config_without_local_dirs() {
+        let root = temp_test_root("config-fallback");
+        fs::create_dir_all(root.join("force-app/main/default/lwc/helloWorld")).unwrap();
+        let config = r#"{
+            "modules": [
+                { "npm": "example-package" },
+                { "name": "x/button", "path": "src/button/button.js" }
+            ]
+        }"#;
+
+        assert!(has_lwc_workspace_roots_from_files(&root, Some(config), None).unwrap());
+
+        fs::remove_dir_all(root).ok();
+    }
+
+    #[test]
+    fn lwc_workspace_roots_fall_back_after_project_without_usable_directories() {
+        let root = temp_test_root("project-fallback");
+        fs::create_dir_all(root.join("packages/app/main/default/lwc/helloWorld")).unwrap();
+        let project = r#"{
+            "packageDirectories": [
+                { "path": "" },
+                { "path": "   " },
+                { "default": true }
+            ]
+        }"#;
+
+        assert!(has_lwc_workspace_roots_from_files(&root, None, Some(project)).unwrap());
 
         fs::remove_dir_all(root).ok();
     }
