@@ -65,4 +65,4 @@ path = "sflog"
 
 [grammars.visualforce]
 repository = "https://github.com/Damecek/tree-sitter-visualforce"
-rev = "88d24e807898f294e9e7d575509378ba352ee297"
+rev = "b1f026749107d549e72b8cef841cfd3ae9cf8240"
