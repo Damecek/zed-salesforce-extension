@@ -5,6 +5,8 @@ import importlib.util
 import io
 import json
 import os
+import subprocess
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -52,6 +54,96 @@ class FramingTests(unittest.TestCase):
             self.assertIs(client.read_message, protocol.read_message)
             self.assertIs(client.write_message, protocol.write_message)
             self.assertIs(client.file_uri, protocol.file_uri)
+
+    def test_visualforce_wrapper_normalizes_missing_configuration_entries(self):
+        wrapper = Path(__file__).with_name("visualforce-language-server-wrapper.js")
+        fake_server_source = r"""
+'use strict';
+
+let buffer = Buffer.alloc(0);
+
+function writeMessage(message) {
+  const body = Buffer.from(JSON.stringify(message), 'utf8');
+  process.stdout.write(`Content-Length: ${body.length}\r\n\r\n`);
+  process.stdout.write(body);
+}
+
+process.stdin.on('data', (chunk) => {
+  buffer = Buffer.concat([buffer, chunk]);
+  while (true) {
+    const headerEnd = buffer.indexOf('\r\n\r\n');
+    if (headerEnd === -1) return;
+    const headers = buffer.subarray(0, headerEnd).toString('ascii');
+    const length = Number(headers.match(/Content-Length:\s*(\d+)/i)[1]);
+    const bodyStart = headerEnd + 4;
+    const bodyEnd = bodyStart + length;
+    if (buffer.length < bodyEnd) return;
+    const message = JSON.parse(buffer.subarray(bodyStart, bodyEnd).toString('utf8'));
+    buffer = buffer.subarray(bodyEnd);
+
+    if (message.method === 'initialize') {
+      writeMessage({ jsonrpc: '2.0', id: message.id, result: { capabilities: {} } });
+    } else if (message.method === 'initialized') {
+      writeMessage({
+        jsonrpc: '2.0',
+        id: 99,
+        method: 'workspace/configuration',
+        params: { items: [{ section: 'css' }, { section: 'html' }] },
+      });
+    } else if (message.id === 99) {
+      writeMessage({
+        jsonrpc: '2.0',
+        method: 'test/configurationResult',
+        params: message.result,
+      });
+    }
+  }
+});
+"""
+        with tempfile.TemporaryDirectory(prefix="visualforce-wrapper-") as temp_dir:
+            fake_server = Path(temp_dir) / "fake-server.js"
+            fake_server.write_text(fake_server_source, encoding="utf-8")
+            proc = subprocess.Popen(
+                ["node", str(wrapper), str(fake_server), "--stdio"],
+                stdin=subprocess.PIPE,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+            )
+            try:
+                protocol.write_message(
+                    proc.stdin,
+                    {"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {}},
+                )
+                self.assertEqual(
+                    protocol.read_message(proc.stdout, 2),
+                    {"jsonrpc": "2.0", "id": 1, "result": {"capabilities": {}}},
+                )
+                protocol.write_message(
+                    proc.stdin,
+                    {"jsonrpc": "2.0", "method": "initialized", "params": {}},
+                )
+                configuration_request = protocol.read_message(proc.stdout, 2)
+                self.assertEqual(configuration_request["method"], "workspace/configuration")
+                protocol.write_message(
+                    proc.stdin,
+                    {
+                        "jsonrpc": "2.0",
+                        "id": configuration_request["id"],
+                        "result": [None, {"validProperties": ["custom-property"]}],
+                    },
+                )
+                forwarded = protocol.read_message(proc.stdout, 2)
+                self.assertEqual(forwarded["method"], "test/configurationResult")
+                self.assertEqual(
+                    forwarded["params"],
+                    [{}, {"validProperties": ["custom-property"]}],
+                )
+            finally:
+                proc.kill()
+                proc.wait(timeout=2)
+                proc.stdin.close()
+                proc.stdout.close()
+                proc.stderr.close()
 
     @staticmethod
     def frame(payload):

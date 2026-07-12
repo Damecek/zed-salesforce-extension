@@ -36,6 +36,21 @@ INVALID_PROBE_TEXT = """<apex:page>
 """
 
 
+def respond_to_server_request(proc, message):
+    if "id" not in message or "method" not in message:
+        return False
+    if message["method"] == "workspace/configuration":
+        items = message.get("params", {}).get("items", [])
+        result = [None] * len(items)
+    else:
+        result = None
+    write_message(
+        proc.stdin,
+        {"jsonrpc": "2.0", "id": message["id"], "result": result},
+    )
+    return True
+
+
 def wait_for_response(proc, response_id, timeout_seconds):
     while True:
         message = read_message(proc.stdout, timeout_seconds)
@@ -43,6 +58,7 @@ def wait_for_response(proc, response_id, timeout_seconds):
             raise RuntimeError(f"Timed out waiting for response {response_id}")
         if message.get("id") == response_id and "method" not in message:
             return message
+        respond_to_server_request(proc, message)
 
 
 def wait_for_diagnostics(proc, document_uri, timeout_seconds):
@@ -50,6 +66,8 @@ def wait_for_diagnostics(proc, document_uri, timeout_seconds):
         message = read_message(proc.stdout, timeout_seconds)
         if message is None:
             raise RuntimeError("Timed out waiting for textDocument/publishDiagnostics")
+        if respond_to_server_request(proc, message):
+            continue
         if message.get("method") != "textDocument/publishDiagnostics":
             continue
         params = message.get("params", {})
@@ -82,7 +100,7 @@ def collect_diagnostics(node, wrapper_path, server_path, language_id, timeout_se
                         "processId": os.getpid(),
                         "rootPath": str(workspace),
                         "rootUri": file_uri(workspace),
-                        "capabilities": {},
+                        "capabilities": {"workspace": {"configuration": True}},
                         "initializationOptions": {
                             "embeddedLanguages": {"css": True, "javascript": True}
                         },
@@ -136,9 +154,12 @@ def collect_diagnostics(node, wrapper_path, server_path, language_id, timeout_se
             proc.stdin.close()
             proc.wait(timeout=timeout_seconds)
             return {"didOpen": opened, "didChange": changed}
-        except Exception:
+        except Exception as error:
             proc.kill()
             proc.wait(timeout=5)
+            stderr = proc.stderr.read().decode("utf-8", errors="replace").strip()
+            if stderr:
+                raise RuntimeError(f"{error}\nVisualforce LSP stderr:\n{stderr}") from error
             raise
 
 

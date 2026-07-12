@@ -157,6 +157,8 @@ by a bundled protocol shim, the verified `visualforceServer.js` path, and
 id `visualforce` for `apex:*` completion and mirrors document changes to an
 internal `html` shadow document because v67.4.0 gates embedded CSS/JavaScript
 validation on that id. Shadow diagnostics are mapped back to the real document;
+missing Zed `workspace/configuration` entries are normalized from `null` to an
+empty settings object so the upstream CSS linter does not crash;
 the dedicated Visualforce grammar and activation remain unchanged.
 Initialization enables embedded CSS and JavaScript support.
 

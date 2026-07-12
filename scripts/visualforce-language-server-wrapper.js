@@ -13,6 +13,7 @@ const upstream = spawn(process.execPath, [upstreamServer, ...process.argv.slice(
 });
 const originalToShadow = new Map();
 const shadowToOriginal = new Map();
+const configurationRequestIds = new Set();
 
 function writeMessage(stream, message) {
   const body = Buffer.from(JSON.stringify(message), 'utf8');
@@ -51,6 +52,18 @@ function diagnosticShadowUri(uri) {
 }
 
 function forwardClientMessage(message) {
+  if (
+    message.method === undefined &&
+    configurationRequestIds.delete(message.id) &&
+    Array.isArray(message.result)
+  ) {
+    writeMessage(upstream.stdin, {
+      ...message,
+      result: message.result.map((setting) => setting ?? {}),
+    });
+    return;
+  }
+
   const method = message.method;
   const document = message.params && message.params.textDocument;
   const uri = document && document.uri;
@@ -87,6 +100,10 @@ function forwardClientMessage(message) {
 }
 
 function forwardServerMessage(message) {
+  if (message.method === 'workspace/configuration' && message.id !== undefined) {
+    configurationRequestIds.add(message.id);
+  }
+
   if (message.method === 'textDocument/publishDiagnostics') {
     const uri = message.params && message.params.uri;
     const originalUri = shadowToOriginal.get(uri);
