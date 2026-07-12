@@ -35,6 +35,13 @@ languages = ["HTML", "JavaScript"]
 "HTML" = "html"
 "JavaScript" = "javascript"
 
+[language_servers.visualforce-language-server]
+name = "Visualforce Language Server"
+languages = ["Visualforce"]
+
+[language_servers.visualforce-language-server.language_ids]
+"Visualforce" = "visualforce"
+
 [grammars.apex]
 repository = "https://github.com/aheber/tree-sitter-sfapex"
 rev = "60cc57049ed6dd4e28e528024a0230ee8fb8a64d"
@@ -55,3 +62,7 @@ path = "sosl"
 repository = "https://github.com/aheber/tree-sitter-sfapex"
 rev = "60cc57049ed6dd4e28e528024a0230ee8fb8a64d"
 path = "sflog"
+
+[grammars.visualforce]
+repository = "https://github.com/Damecek/tree-sitter-visualforce"
+rev = "b1f026749107d549e72b8cef841cfd3ae9cf8240"

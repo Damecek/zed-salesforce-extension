@@ -1,56 +1,11 @@
 #!/usr/bin/env python3
 import argparse
-import json
 import os
-import select
 import subprocess
 import sys
 from pathlib import Path
-from urllib.parse import quote
 
-
-def write_message(stream, payload):
-    body = json.dumps(payload, separators=(",", ":")).encode("utf-8")
-    stream.write(f"Content-Length: {len(body)}\r\n\r\n".encode("ascii"))
-    stream.write(body)
-    stream.flush()
-
-
-def wait_readable(stream, timeout_seconds):
-    ready, _, _ = select.select([stream], [], [], timeout_seconds)
-    return bool(ready)
-
-
-def read_message(stream, timeout_seconds):
-    headers = {}
-    while True:
-        if not wait_readable(stream, timeout_seconds):
-            return None
-        line = stream.readline()
-        if not line:
-            return None
-        if line in (b"\r\n", b"\n"):
-            break
-        decoded = line.decode("ascii", errors="replace").strip()
-        if ":" in decoded:
-            key, value = decoded.split(":", 1)
-            headers[key.strip().lower()] = value.strip()
-
-    content_length = headers.get("content-length")
-    if content_length is None:
-        return None
-
-    length = int(content_length)
-    if not wait_readable(stream, timeout_seconds):
-        return None
-    body = stream.read(length)
-    if not body:
-        return None
-    return json.loads(body.decode("utf-8", errors="strict"))
-
-
-def file_uri(path):
-    return "file://" + quote(str(path), safe="/")
+from lsp_test_protocol import file_uri, read_message, write_message
 
 
 def wait_for_response(stream, response_id, timeout_seconds, max_messages=200):
